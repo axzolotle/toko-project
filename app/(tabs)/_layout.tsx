@@ -1,33 +1,75 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Tabs } from "expo-router";
+import { Platform } from "react-native";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: "#2563eb",
+        tabBarInactiveTintColor: "#94a3b8",
+        tabBarStyle: {
+          height: Platform.OS === "ios" ? 80 : 62,
+          paddingBottom: Platform.OS === "ios" ? 20 : 8,
+          paddingTop: 6,
+          borderTopWidth: 0.5,
+          borderTopColor: "#e2e8f0",
+          backgroundColor: "#ffffff",
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={22}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="transaksi"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Transaksi",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "cash" : "cash-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="barang"
+        options={{
+          title: "Barang",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "cube" : "cube-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="test"
+        options={{
+          title: "Testing",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "analytics" : "analytics-outline"}
+              size={22}
+              color={color}
+            />
+          ),
         }}
       />
     </Tabs>

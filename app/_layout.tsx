@@ -1,24 +1,50 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { useSyncManager } from "@/hooks/Network";
+import { Stack } from "expo-router";
+import { useEffect } from "react";
+import { StatusBar } from "react-native";
+import {
+  getAllItems,
+  getAllKas,
+  getAllStok,
+  getAllTransaksi,
+  getAllUsers,
+  initDB,
+} from "../database/db2";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  useSyncManager();
+
+  useEffect(() => {
+    initDB();
+    console.log("✅ Database initialized");
+
+    // Log all data from each table
+    console.log("\n📊 === DATA DARI DATABASE ===");
+
+    const users = getAllUsers();
+    console.log("👥 USERS:", users);
+
+    const kas = getAllKas();
+    console.log("💰 KAS:", kas);
+
+    const items = getAllItems();
+    console.log("📦 ITEMS:", items);
+
+    const transaksi = getAllTransaksi();
+    console.log("💳 TRANSAKSI:", transaksi);
+
+    const stok = getAllStok();
+    console.log("📊 STOK:", stok);
+
+    console.log("✅ === SELESAI ===\n");
+  }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar />
+    </>
   );
 }
