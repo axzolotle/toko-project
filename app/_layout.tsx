@@ -1,4 +1,3 @@
-import { useSyncManager } from "@/hooks/Network";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { StatusBar } from "react-native";
@@ -8,11 +7,11 @@ import {
   getAllStok,
   getAllTransaksi,
   getAllUsers,
-  initDB,
+  initDB
 } from "../database/db2";
 
 export default function RootLayout() {
-  useSyncManager();
+  // useSyncManager();
 
   useEffect(() => {
     initDB();

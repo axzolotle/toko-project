@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { v4 as uuidv4 } from "uuid";
 
 export const db = SQLite.openDatabaseSync("konter.db");
 
@@ -73,19 +74,20 @@ export function initDB() {
   db.execSync(
     "CREATE TABLE IF NOT EXISTS users (" +
       "  id          INTEGER PRIMARY KEY AUTOINCREMENT," +
-      "  uuid        TEXT," +
+      "  uuid        TEXT UNIQUE," +
       "  nama        TEXT NOT NULL," +
       "  username    TEXT NOT NULL UNIQUE," +
       "  password    TEXT NOT NULL," +
       "  role        TEXT NOT NULL CHECK(role IN ('admin', 'operator'))," +
-      "  aktif       INTEGER DEFAULT 1" +
+      "  aktif       INTEGER DEFAULT 1," +
+      "  synced      INTEGER DEFAULT 0" +
       ")",
   );
 
   db.execSync(
     "CREATE TABLE IF NOT EXISTS items (" +
       "  id          INTEGER PRIMARY KEY AUTOINCREMENT," +
-      "  uuid        TEXT," +
+      "  uuid        TEXT UNIQUE," +
       "  nama        TEXT NOT NULL," +
       "  jenis       TEXT NOT NULL," +
       "  kategori    TEXT NOT NULL," +
@@ -95,14 +97,15 @@ export function initDB() {
       "  quantity    INTEGER NOT NULL DEFAULT 0," +
       "  aktif       INTEGER DEFAULT 1," +
       "  synced      INTEGER DEFAULT 0," +
-      "  created_by  INTEGER NOT NULL" +
+      "  created_by  INTEGER NOT NULL," +
+      "  FOREIGN KEY (created_by) REFERENCES users(id)" +
       ")",
   );
 
   db.execSync(
     "CREATE TABLE IF NOT EXISTS transaksi (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
-      "  uuid         TEXT," +
+      "  uuid         TEXT UNIQUE," +
       "  item_id      INTEGER NOT NULL," +
       "  item_nama    TEXT NOT NULL," +
       "  item_jenis   TEXT NOT NULL," +
@@ -115,7 +118,9 @@ export function initDB() {
       "  laba         REAL NOT NULL," +
       "  tanggal      TEXT NOT NULL," +
       "  synced       INTEGER DEFAULT 0," +
-      "  operator_id  INTEGER NOT NULL" +
+      "  operator_id  INTEGER NOT NULL," +
+      "  FOREIGN KEY (item_id) REFERENCES items(id)," +
+      "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
 
@@ -127,22 +132,83 @@ export function initDB() {
       "  jenis         TEXT NOT NULL CHECK(jenis IN ('masuk', 'keluar'))," +
       "  keterangan     TEXT DEFAULT ''," +
       "  tanggal        TEXT NOT NULL," +
-      "  operator_id    INTEGER NOT NULL" +
+      "  operator_id    INTEGER NOT NULL," +
+      "  FOREIGN KEY (item_id) REFERENCES items(id)," +
+      "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
 
   db.execSync(
     "CREATE TABLE IF NOT EXISTS kas (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
-      "  uuid         TEXT," +
+      "  uuid         TEXT UNIQUE," +
       "  nama         TEXT NOT NULL," +
-      "jenis        TEXT NOT NULL," +
-      "keterangan    TEXT DEFAULT ''," +
-      "jumlah        REAL NOT NULL," +
-      "tanggal       TEXT NOT NULL," +
-      "operator_id   INTEGER NOT NULL" +
+      "  jenis        TEXT NOT NULL," +
+      "  keterangan    TEXT DEFAULT ''," +
+      "  jumlah        REAL NOT NULL," +
+      "  tanggal       TEXT NOT NULL," +
+      "  operator_id   INTEGER NOT NULL," +
+      "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
+}
+
+export function insertTestData() {
+  try {
+    console.log("🧪 Inserting test data...");
+
+    // Insert test user
+    db.runSync(
+      `INSERT INTO users (uuid, nama, username, password, role, aktif, synced)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        "Admin Test",
+        "admin_test",
+        "password123",
+        "admin",
+        1,
+        0, // synced = 0 (belum sync)
+      ],
+    );
+    console.log("✅ User inserted");
+
+    // Verify
+    const users = db.getAllSync<User>("SELECT * FROM users WHERE synced = 0");
+    console.log("Users to sync:", users);
+
+    // Insert test item
+    const adminId = users[0]?.id || 1;
+    db.runSync(
+      `INSERT INTO items (uuid, nama, jenis, kategori, harga_modal, harga_jual, created_by, synced)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        "Item Test A",
+        "Barang",
+        "Elektronik",
+        100000,
+        150000,
+        adminId,
+        0,
+      ],
+    );
+    console.log("✅ Item inserted");
+
+    // Verify
+    const items = db.getAllSync("SELECT * FROM items WHERE synced = 0");
+    console.log("Items to sync:", items);
+  } catch (error) {
+    console.error("❌ Insert test data error:", error);
+  }
+}
+
+export function dropAllTables() {
+  db.execSync("DROP TABLE IF EXISTS users");
+  db.execSync("DROP TABLE IF EXISTS items");
+  db.execSync("DROP TABLE IF EXISTS transaksi");
+  db.execSync("DROP TABLE IF EXISTS stok");
+  db.execSync("DROP TABLE IF EXISTS kas");
 }
 
 export function createItem(
