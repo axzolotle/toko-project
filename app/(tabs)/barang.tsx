@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -14,15 +15,18 @@ import {
 } from "react-native";
 import {
   createItem,
+  createKasForItem,
   getAllItems,
   getJenisItems,
   Item,
+  updateKasQuantity,
 } from "../../database/db2";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
-const CREATED_BY = 1; // Ganti dengan user_id dari session
 const JENIS_PRESET = ["Makanan", "Minuman", "Snack", "Rokok", "Sembako"];
 
 export default function BarangScreen() {
+  const { userId } = useCurrentUser();
   const [items, setItems] = useState<Item[]>([]);
   const [jenisList, setJenisList] = useState<string[]>([]);
 
@@ -36,6 +40,10 @@ export default function BarangScreen() {
   const [quantity, setQuantity] = useState("");
 
   const [showForm, setShowForm] = useState(false);
+  const [stockModalVisible, setStockModalVisible] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editingItemName, setEditingItemName] = useState("");
+  const [addQuantityInput, setAddQuantityInput] = useState("");
 
   useEffect(() => {
     loadJenis();
@@ -78,13 +86,11 @@ export default function BarangScreen() {
       return Alert.alert("Error", "Harga modal tidak valid");
     if (!hargaJual || isNaN(jualNum))
       return Alert.alert("Error", "Harga jual tidak valid");
-    if (!quantity || isNaN(parseInt(quantity, 10)))
-      return Alert.alert("Error", "Quantity tidak valid");
 
-    const qty = parseInt(quantity, 10);
+    const qty = 0;
 
     try {
-      createItem(
+      const itemId = createItem(
         nama.trim(),
         jenisAkhir,
         kategori.trim(),
@@ -92,10 +98,16 @@ export default function BarangScreen() {
         modalNum,
         jualNum,
         qty,
-        CREATED_BY,
+        userId,
       );
 
-      Alert.alert("Sukses", `Item "${nama}" berhasil ditambahkan`);
+      // Create kas entry for this item with quantity 0
+      createKasForItem(itemId, nama.trim(), userId);
+
+      Alert.alert(
+        "Sukses",
+        `Item "${nama}" berhasil ditambahkan. ID User: ${userId}`,
+      );
 
       setNama("");
       setJenis("");
@@ -125,6 +137,58 @@ export default function BarangScreen() {
     setHargaJual("");
     setQuantity("");
     setShowForm(false);
+  };
+
+  const openStockModal = (itemId: number, itemName: string) => {
+    setEditingItemId(itemId);
+    setEditingItemName(itemName);
+    setAddQuantityInput("");
+    setStockModalVisible(true);
+  };
+
+  const handleAddQuantity = () => {
+    if (!addQuantityInput.trim()) {
+      return Alert.alert("Error", "Masukkan jumlah quantity");
+    }
+
+    const qty = parseInt(addQuantityInput);
+    if (isNaN(qty) || qty <= 0) {
+      return Alert.alert("Error", "Jumlah harus lebih dari 0");
+    }
+
+    if (editingItemId === null) return;
+
+    try {
+      updateKasQuantity(
+        editingItemId,
+        qty,
+        "masuk",
+        userId,
+        "Penambahan stok manual",
+      );
+
+      Alert.alert(
+        "Sukses",
+        `Stok "${editingItemName}" berhasil ditambahkan ${qty} unit`,
+      );
+
+      setAddQuantityInput("");
+      setStockModalVisible(false);
+      setEditingItemId(null);
+      setEditingItemName("");
+
+      loadItems();
+    } catch (error) {
+      Alert.alert("Error", "Gagal menambahkan stok");
+      console.error(error);
+    }
+  };
+
+  const handleCloseStockModal = () => {
+    setStockModalVisible(false);
+    setEditingItemId(null);
+    setEditingItemName("");
+    setAddQuantityInput("");
   };
 
   return (
@@ -170,10 +234,14 @@ export default function BarangScreen() {
                         Rp {item.harga_jual.toLocaleString("id-ID")}
                       </Text>
                     </View>
-                    <View style={[s.priceBox, s.priceBoxStok]}>
+                    <TouchableOpacity
+                      style={[s.priceBox, s.priceBoxStok]}
+                      onPress={() => openStockModal(item.id, item.nama)}
+                    >
                       <Text style={s.priceLabel}>Stok</Text>
                       <Text style={s.priceValue}>{item.quantity}</Text>
-                    </View>
+                      <Text style={s.tapHint}>Tekan untuk tambah</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               )}
@@ -322,16 +390,6 @@ export default function BarangScreen() {
               </View>
             )}
 
-            <Text style={[s.label, { marginTop: 16 }]}>Quantity Awal *</Text>
-            <TextInput
-              style={s.input}
-              value={quantity}
-              onChangeText={setQuantity}
-              placeholder="0"
-              keyboardType="numeric"
-              returnKeyType="done"
-            />
-
             {/* BUTTONS */}
             <View style={s.buttonContainer}>
               <TouchableOpacity
@@ -350,6 +408,52 @@ export default function BarangScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+
+      {/* STOCK MODAL */}
+      <Modal
+        visible={stockModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseStockModal}
+      >
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>Tambah Stok: {editingItemName}</Text>
+
+            <View style={s.modalStockInfo}>
+              <Text style={s.modalStockLabel}>Stok Saat Ini:</Text>
+              <Text style={s.modalStockValue}>
+                {items.find((i) => i.id === editingItemId)?.quantity || 0} unit
+              </Text>
+            </View>
+
+            <Text style={s.label}>Jumlah yang ditambahkan *</Text>
+            <TextInput
+              style={s.input}
+              value={addQuantityInput}
+              onChangeText={setAddQuantityInput}
+              placeholder="Masukkan jumlah"
+              keyboardType="numeric"
+              autoFocus
+            />
+
+            <View style={s.buttonContainer}>
+              <TouchableOpacity
+                style={[s.btn, s.btnCancel]}
+                onPress={handleCloseStockModal}
+              >
+                <Text style={s.btnCancelText}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.btn, s.btnSimpan]}
+                onPress={handleAddQuantity}
+              >
+                <Text style={s.btnSimpanText}>Tambah Stok</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -459,6 +563,12 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     color: "#000",
+  },
+  tapHint: {
+    fontSize: 8,
+    color: "#0ea5e9",
+    marginTop: 2,
+    fontWeight: "500",
   },
 
   // FORM
@@ -602,5 +712,45 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#fff",
+  },
+
+  // MODAL STYLES
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    paddingBottom: 30,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: 16,
+  },
+  modalStockInfo: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderLeftWidth: 4,
+    borderLeftColor: "#10b981",
+  },
+  modalStockLabel: {
+    fontSize: 12,
+    color: "#666",
+  },
+  modalStockValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#10b981",
   },
 });

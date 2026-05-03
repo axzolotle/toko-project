@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { v4 as uuidv4 } from "uuid";
+import uuid from "react-native-uuid";
 
 export const db = SQLite.openDatabaseSync("konter.db");
 
@@ -142,12 +142,14 @@ export function initDB() {
     "CREATE TABLE IF NOT EXISTS kas (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
       "  uuid         TEXT UNIQUE," +
+      "  item_id      INTEGER," +
       "  nama         TEXT NOT NULL," +
       "  jenis        TEXT NOT NULL," +
       "  keterangan    TEXT DEFAULT ''," +
       "  jumlah        REAL NOT NULL," +
       "  tanggal       TEXT NOT NULL," +
       "  operator_id   INTEGER NOT NULL," +
+      "  FOREIGN KEY (item_id) REFERENCES items(id)," +
       "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
@@ -162,7 +164,7 @@ export function insertTestData() {
       `INSERT INTO users (uuid, nama, username, password, role, aktif, synced)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        uuidv4(),
+        uuid.v4(),
         "Admin Test",
         "admin_test",
         "password123",
@@ -183,7 +185,7 @@ export function insertTestData() {
       `INSERT INTO items (uuid, nama, jenis, kategori, harga_modal, harga_jual, created_by, synced)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        uuidv4(),
+        uuid.v4(),
         "Item Test A",
         "Barang",
         "Elektronik",
@@ -204,10 +206,10 @@ export function insertTestData() {
 }
 
 export function dropAllTables() {
-  db.execSync("DROP TABLE IF EXISTS users");
-  db.execSync("DROP TABLE IF EXISTS items");
-  db.execSync("DROP TABLE IF EXISTS transaksi");
-  db.execSync("DROP TABLE IF EXISTS stok");
+  // db.execSync("DROP TABLE IF EXISTS users");
+  // db.execSync("DROP TABLE IF EXISTS items");
+  // db.execSync("DROP TABLE IF EXISTS transaksi");
+  // db.execSync("DROP TABLE IF EXISTS stok");
   db.execSync("DROP TABLE IF EXISTS kas");
 }
 
@@ -272,13 +274,59 @@ export function createKas(
   keterangan: string,
   jumlah: number,
   operator_id: number,
+  item_id?: number,
 ): number {
   const tanggal = new Date().toISOString();
   const result = db.runSync(
-    "INSERT INTO kas (nama, jenis, keterangan, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?)",
-    [nama, jenis, keterangan, jumlah, tanggal, operator_id],
+    "INSERT INTO kas (item_id, nama, jenis, keterangan, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [item_id || null, nama, jenis, keterangan, jumlah, tanggal, operator_id],
   );
   return result.lastInsertRowId;
+}
+
+export function updateKasQuantity(
+  item_id: number,
+  quantity: number,
+  jenis: "masuk" | "keluar",
+  operator_id: number,
+  keterangan: string = "",
+): number {
+  const tanggal = new Date().toISOString();
+
+  // Update items.quantity
+  if (jenis === "masuk") {
+    db.runSync("UPDATE items SET quantity = quantity + ? WHERE id = ?", [
+      quantity,
+      item_id,
+    ]);
+  } else {
+    db.runSync("UPDATE items SET quantity = quantity - ? WHERE id = ?", [
+      quantity,
+      item_id,
+    ]);
+  }
+
+  // Log to kas table for history
+  const result = db.runSync(
+    "INSERT INTO kas (item_id, nama, jenis, keterangan, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [item_id, "", jenis, keterangan, quantity, tanggal, operator_id],
+  );
+  return result.lastInsertRowId;
+}
+
+export function createKasForItem(
+  item_id: number,
+  item_nama: string,
+  operator_id: number,
+): number {
+  return createKas(
+    item_nama,
+    "inventory",
+    "Item baru",
+    0,
+    operator_id,
+    item_id,
+  );
 }
 
 export function createUser(
@@ -414,6 +462,35 @@ export function getRingkasanHarian(tanggal: string) {
 export function getAllUsers(): User[] {
   const result = db.getAllSync("SELECT * FROM users WHERE aktif = 1");
   return result as User[];
+}
+
+export function getUserById(id: number): User | null {
+  const result = db.getFirstSync<User>(
+    "SELECT * FROM users WHERE id = ? AND aktif = 1",
+    [id],
+  );
+  return result || null;
+}
+
+export function ensureDefaultUser(): number {
+  // Check if default user already exists
+  const existingUser = db.getFirstSync<User>(
+    "SELECT * FROM users WHERE username = ?",
+    ["fadiel"],
+  );
+
+  if (existingUser) {
+    return existingUser.id;
+  }
+
+  // Create default user
+  const result = db.runSync(
+    "INSERT INTO users (uuid, nama, username, password, role, aktif, synced) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [uuid.v4(), "User Default", "fadiel", "default123", "operator", 1, 0],
+  );
+
+  console.log("✅ Default user created with id:", result.lastInsertRowId);
+  return result.lastInsertRowId;
 }
 
 export function getAllKas(): kas[] {

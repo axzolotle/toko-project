@@ -5,7 +5,7 @@ import uuid from "react-native-uuid";
 export async function testSupabaseConnection() {
   try {
     const { data, error } = await supabase
-      .from("user")
+      .from("kas")
       .select("*", { count: "exact" })
       .limit(1);
 
@@ -33,11 +33,23 @@ export async function syncUsers() {
       return { success: true, synced: 0, table: "users" };
     }
 
+    const handleUUID = (user: any) => {
+      if (!user.uuid) {
+        const newUUID = uuid.v4();
+        db.runSync("UPDATE users SET uuid = ? WHERE id = ?", [
+          newUUID,
+          user.id,
+        ]);
+        return newUUID;
+      }
+      return user.uuid;
+    };
+
     console.log(`📝 [USERS] Found ${unSyncedUsers.length} records to sync`);
 
     // 2️⃣ Prepare data untuk Supabase
     const dataToSync = unSyncedUsers.map((user) => ({
-      uuid: user.uuid || uuid.v4(),
+      uuid: handleUUID(user),
       nama: user.nama,
       username: user.username,
       password: user.password,
@@ -64,7 +76,7 @@ export async function syncUsers() {
       // Update uuid jika baru di-generate
       if (!user.uuid && user.uuid) {
         db.runSync("UPDATE users SET uuid = ?, synced = 1 WHERE id = ?", [
-          user.uuid,
+          handleUUID(user),
           user.id,
         ]);
       } else {

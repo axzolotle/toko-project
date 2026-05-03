@@ -1,18 +1,24 @@
 import { insertTestData } from "@/database/db2";
 import {
   syncAllTables,
-  syncUsers,
-  testSupabaseConnection,
+  syncItems,
+  testSupabaseConnection
 } from "@/database/sync";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button, Text, View } from "react-native";
 
 export default function HomeScreen() {
+  const showUserNowId = async () => {
+    const userId = await useCurrentUser();
+    console.log("👤 Current User ID from AsyncStorage:", userId);
+  };
+
   const handleSync = async () => {
     try {
-      const result = await syncUsers();
+      const result = await syncItems();
       console.log("Sync result:", result);
     } catch (error) {
-      console.error("Error syncing users:", error);
+      console.error("Error syncing items:", error);
     }
   };
 
@@ -30,8 +36,9 @@ export default function HomeScreen() {
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
       <Text>Home Screen</Text>
       <Button title="Test Supabase" onPress={testSupabaseConnection} />
-      <Button title="Sync Users" onPress={handleSync} />
+      <Button title="Sync items" onPress={handleSync} />
       <Button title="Sync All Tables" onPress={handleTestData} />
+      <Button title="Use Now" onPress={showUserNowId} />
     </View>
   );
 }
