@@ -19,9 +19,9 @@ import {
   getAllItems,
   getJenisItems,
   Item,
-  updateKasQuantity,
 } from "../../database/db2";
-import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { createStok } from "../../service/Stok";
+import { useCurrentUser } from "../../service/useCurrentUser";
 
 const JENIS_PRESET = ["Makanan", "Minuman", "Snack", "Rokok", "Sembako"];
 
@@ -43,6 +43,7 @@ export default function BarangScreen() {
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
+  const [hargaBeliStok, setHargaBeliStok] = useState("");
   const [addQuantityInput, setAddQuantityInput] = useState("");
 
   useEffect(() => {
@@ -159,12 +160,13 @@ export default function BarangScreen() {
     if (editingItemId === null) return;
 
     try {
-      updateKasQuantity(
+      createStok(
         editingItemId,
         qty,
         "masuk",
+        "Penambahan stok via aplikasi",
+        parseFloat(hargaBeliStok) || 0, // harga_beli bisa diisi jika ingin catat harga pembelian stok
         userId,
-        "Penambahan stok manual",
       );
 
       Alert.alert(
@@ -435,6 +437,15 @@ export default function BarangScreen() {
               placeholder="Masukkan jumlah"
               keyboardType="numeric"
               autoFocus
+            />
+
+            <Text style={s.hint}>Harga Beli : (opsional, untuk catatan)</Text>
+            <TextInput
+              style={s.input}
+              value={hargaBeliStok}
+              onChangeText={setHargaBeliStok}
+              placeholder="Masukkan harga beli barang"
+              keyboardType="numeric"
             />
 
             <View style={s.buttonContainer}>

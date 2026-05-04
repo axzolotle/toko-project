@@ -98,7 +98,6 @@ export async function syncItems() {
   console.log("📤 [SYNC] Starting sync ITEMS...");
 
   try {
-    // 1️⃣ Ambil items yang belum sync (dengan user uuid untuk FK mapping)
     const unSyncedItems = db.getAllSync<any>(
       `SELECT i.*, u.uuid as created_by_uuid 
        FROM items i 
@@ -111,26 +110,53 @@ export async function syncItems() {
       return { success: true, synced: 0, table: "items" };
     }
 
-    console.log(`📝 [ITEMS] Found ${unSyncedItems.length} records to sync`);
+    const dataToSync = [];
 
-    // 2️⃣ Prepare data (FK tetap ID lokal dulu)
-    const dataToSync = unSyncedItems.map((item) => ({
-      uuid: item.uuid || uuid.v4(),
-      nama: item.nama,
-      jenis: item.jenis,
-      kategori: item.kategori,
-      detail: item.detail,
-      harga_modal: item.harga_modal,
-      harga_jual: item.harga_jual,
-      quantity: item.quantity,
-      aktif: item.aktif,
-      created_by: item.created_by, // FK lokal dulu
-    }));
+    for (const item of unSyncedItems) {
+      if (!item.created_by_uuid) {
+        console.warn("⚠️ Missing user UUID, skip:", item.id);
+        continue;
+      }
 
-    console.log("📤 [ITEMS] Uploading to Supabase...", dataToSync);
+      // 🔥 1. Generate UUID kalau belum ada
+      let itemUUID = item.uuid;
 
-    // 3️⃣ Upload ke Supabase
-    const { data: syncedData, error } = await supabase
+      if (!itemUUID) {
+        itemUUID = uuid.v4();
+
+        // 🔥 2. SIMPAN KE SQLITE (INI YANG KEMARIN KURANG)
+        db.runSync("UPDATE items SET uuid = ? WHERE id = ?", [
+          itemUUID,
+          item.id,
+        ]);
+
+        console.log(
+          `🆕 [ITEMS] UUID generated for item ${item.id}: ${itemUUID}`,
+        );
+      }
+
+      dataToSync.push({
+        uuid: itemUUID,
+        nama: item.nama,
+        jenis: item.jenis,
+        kategori: item.kategori,
+        detail: item.detail,
+        harga_modal: item.harga_modal,
+        harga_jual: item.harga_jual,
+        quantity: item.quantity,
+        aktif: item.aktif,
+        created_by: item.created_by_uuid,
+      });
+    }
+
+    if (dataToSync.length === 0) {
+      console.warn("⚠️ No valid data to sync");
+      return { success: false, table: "items" };
+    }
+
+    console.log("📤 Uploading items:", dataToSync);
+
+    const { data, error } = await supabase
       .from("items")
       .upsert(dataToSync, { onConflict: "uuid" })
       .select();
@@ -139,52 +165,14 @@ export async function syncItems() {
       throw new Error(`Supabase error: ${error.message}`);
     }
 
-    console.log("✅ [ITEMS] Synced from Supabase:", syncedData);
+    console.log("✅ [ITEMS] Synced:", data);
 
-    // 4️⃣ FIX FK: Update created_by ke ID Supabase
-    for (let i = 0; i < unSyncedItems.length; i++) {
-      const localItem = unSyncedItems[i];
-      const itemUUID = localItem.uuid;
-
-      // Cari user di Supabase dengan uuid yang sama
-      const { data: matchedUser, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("uuid", localItem.created_by_uuid)
-        .single();
-
-      if (userError) {
-        console.warn(
-          `⚠️ [ITEMS] User not found for uuid=${localItem.created_by_uuid}`,
-        );
-        continue;
-      }
-
-      if (matchedUser) {
-        // Update FK ke ID Supabase
-        const { error: updateError } = await supabase
-          .from("items")
-          .update({ created_by: matchedUser.id })
-          .eq("uuid", itemUUID);
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        console.log(
-          `✅ [ITEMS] Updated FK: uuid=${itemUUID}, created_by: ${localItem.created_by} → ${matchedUser.id}`,
-        );
-      }
-    }
-
-    // 5️⃣ Mark synced di local
+    // 🔥 3. Mark synced
     unSyncedItems.forEach((item) => {
       db.runSync("UPDATE items SET synced = 1 WHERE id = ?", [item.id]);
     });
 
-    console.log(`✅ [ITEMS] Marked ${unSyncedItems.length} records as synced`);
-
-    return { success: true, synced: unSyncedItems.length, table: "items" };
+    return { success: true, synced: dataToSync.length, table: "items" };
   } catch (error) {
     console.error("❌ [ITEMS] Sync error:", error);
     return { success: false, error, table: "items" };
@@ -196,10 +184,15 @@ export async function syncTransaksi() {
   console.log("📤 [SYNC] Starting sync TRANSAKSI...");
 
   try {
+    // 🔥 1. Query benar (JOIN 2 tabel)
     const unSyncedTransaksi = db.getAllSync<any>(
-      `SELECT t.*, u.uuid as operator_uuid 
-       FROM transaksi t 
-       LEFT JOIN users u ON t.operator_id = u.id 
+      `SELECT 
+         t.*, 
+         u.uuid as operator_uuid,
+         i.uuid as item_uuid
+       FROM transaksi t
+       LEFT JOIN users u ON t.operator_id = u.id
+       LEFT JOIN items i ON t.item_id = i.id
        WHERE t.synced = 0`,
     );
 
@@ -208,55 +201,81 @@ export async function syncTransaksi() {
       return { success: true, synced: 0, table: "transaksi" };
     }
 
-    const dataToSync = unSyncedTransaksi.map((t) => ({
-      uuid: t.uuid || uuid.v4(),
-      item_id: t.item_id,
-      item_nama: t.item_nama,
-      item_jenis: t.item_jenis,
-      item_kategori: t.item_kategori,
-      item_detail: t.item_detail,
-      harga_jual: t.harga_jual,
-      harga_modal: t.harga_modal,
-      quantity: t.quantity,
-      total: t.total,
-      laba: t.laba,
-      tanggal: t.tanggal,
-      operator_id: t.operator_id,
-    }));
+    console.log(`📝 Found ${unSyncedTransaksi.length} transaksi`);
 
-    const { data: syncedData, error } = await supabase
+    const dataToSync = [];
+
+    for (const t of unSyncedTransaksi) {
+      // 🔥 2. Skip kalau FK belum siap
+      if (!t.operator_uuid || !t.item_uuid) {
+        console.warn("⚠️ Missing FK UUID → skip transaksi:", t.id);
+        continue;
+      }
+
+      // 🔥 3. Handle UUID transaksi
+      let trxUUID = t.uuid;
+
+      if (!trxUUID) {
+        trxUUID = uuid.v4();
+
+        db.runSync("UPDATE transaksi SET uuid = ? WHERE id = ?", [
+          trxUUID,
+          t.id,
+        ]);
+
+        console.log(`🆕 UUID transaksi ${t.id}: ${trxUUID}`);
+      }
+
+      dataToSync.push({
+        uuid: trxUUID,
+
+        // 🔥 FK sekarang UUID
+        item_id: t.item_uuid,
+        operator_id: t.operator_uuid,
+
+        item_nama: t.item_nama,
+        item_jenis: t.item_jenis,
+        item_kategori: t.item_kategori,
+        item_detail: t.item_detail,
+
+        harga_jual: t.harga_jual,
+        harga_modal: t.harga_modal,
+        quantity: t.quantity,
+        total: t.total,
+        laba: t.laba,
+        tanggal: t.tanggal,
+      });
+    }
+
+    if (dataToSync.length === 0) {
+      console.warn("⚠️ No valid transaksi to sync");
+      return { success: false, table: "transaksi" };
+    }
+
+    console.log("📤 Uploading transaksi:", dataToSync);
+
+    // 🔥 4. Upsert langsung (tanpa mapping)
+    const { data, error } = await supabase
       .from("transaksi")
       .upsert(dataToSync, { onConflict: "uuid" })
       .select();
 
-    if (error) throw error;
-
-    // Update FK operator_id ke Supabase ID
-    for (let i = 0; i < unSyncedTransaksi.length; i++) {
-      const localT = unSyncedTransaksi[i];
-
-      const { data: matchedUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("uuid", localT.operator_uuid)
-        .single();
-
-      if (matchedUser) {
-        await supabase
-          .from("transaksi")
-          .update({ operator_id: matchedUser.id })
-          .eq("uuid", localT.uuid);
-      }
+    if (error) {
+      throw new Error(`Supabase error: ${error.message}`);
     }
 
+    console.log("✅ [TRANSAKSI] Synced:", data);
+
+    // 🔥 5. Mark synced
     unSyncedTransaksi.forEach((t) => {
       db.runSync("UPDATE transaksi SET synced = 1 WHERE id = ?", [t.id]);
     });
 
-    console.log(`✅ [TRANSAKSI] Synced ${unSyncedTransaksi.length} records`);
+    console.log(`✅ [TRANSAKSI] Synced ${dataToSync.length} records`);
+
     return {
       success: true,
-      synced: unSyncedTransaksi.length,
+      synced: dataToSync.length,
       table: "transaksi",
     };
   } catch (error) {
@@ -282,40 +301,49 @@ export async function syncKas() {
       return { success: true, synced: 0, table: "kas" };
     }
 
-    const dataToSync = unSyncedKas.map((k) => ({
-      uuid: k.uuid || uuid.v4(),
-      nama: k.nama,
-      jenis: k.jenis,
-      keterangan: k.keterangan,
-      jumlah: k.jumlah,
-      tanggal: k.tanggal,
-      operator_id: k.operator_id,
-    }));
+    const dataToSync = [];
 
-    const { data: syncedData, error } = await supabase
+    for (const k of unSyncedKas) {
+      if (!k.operator_uuid) {
+        console.warn("⚠️ Missing operator UUID, skip kas:", k.id);
+        continue;
+      }
+
+      let kasUUID = k.uuid;
+
+      if (!kasUUID) {
+        const newUUID = uuid.v4();
+        db.runSync("UPDATE kas SET uuid = ? WHERE id = ?", [newUUID, k.id]);
+        k.uuid = newUUID;
+        console.log(`🆕 [KAS] UUID generated for kas ${k.id}: ${newUUID}`);
+      }
+
+      dataToSync.push({
+        uuid: k.uuid,
+        nama: k.nama,
+        jenis: k.jenis,
+        keterangan: k.keterangan,
+        jumlah: k.jumlah,
+        tanggal: k.tanggal,
+        operator_id: k.operator_uuid,
+      });
+    }
+
+    console.log("📤 Uploading kas:", dataToSync);
+
+    if (dataToSync.length === 0) {
+      console.warn("⚠️ No valid kas to sync");
+      return { success: false, table: "kas" };
+    }
+
+    const { data, error } = await supabase
       .from("kas")
       .upsert(dataToSync, { onConflict: "uuid" })
       .select();
 
     if (error) throw error;
 
-    // Update FK operator_id
-    for (let i = 0; i < unSyncedKas.length; i++) {
-      const localK = unSyncedKas[i];
-
-      const { data: matchedUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("uuid", localK.operator_uuid)
-        .single();
-
-      if (matchedUser) {
-        await supabase
-          .from("kas")
-          .update({ operator_id: matchedUser.id })
-          .eq("uuid", localK.uuid);
-      }
-    }
+    console.log("✅ [KAS] Synced:", data);
 
     unSyncedKas.forEach((k) => {
       db.runSync("UPDATE kas SET synced = 1 WHERE id = ?", [k.id]);
@@ -329,6 +357,83 @@ export async function syncKas() {
   }
 }
 
+export async function syncStok() {
+  console.log("📤 [SYNC] Starting sync STOK...");
+
+  try {
+    const unSyncedStok = db.getAllSync<any>(
+      `SELECT s.*, 
+       u.uuid as operator_uuid, 
+       i.uuid as item_uuid 
+       FROM stok s 
+       LEFT JOIN users u ON s.operator_id = u.id 
+       LEFT JOIN items i ON s.item_id = i.id
+       WHERE s.synced = 0`,
+    );
+
+    if (unSyncedStok.length === 0) {
+      console.log("✅ [STOK] No data to sync");
+      return { success: true, synced: 0, table: "stok" };
+    }
+
+    const dataToSync = [];
+
+    for (const s of unSyncedStok) {
+      if (!s.operator_uuid || !s.item_uuid) {
+        console.warn("⚠️ Missing FK UUID, skip stok:", s.id);
+        continue;
+      }
+
+      let stokUUID = s.uuid;
+
+      if (!stokUUID) {
+        const newUUID = uuid.v4();
+        db.runSync("UPDATE stok SET uuid = ? WHERE id = ?", [newUUID, s.id]);
+        s.uuid = newUUID;
+        console.log(`🆕 [STOK] UUID generated for stok ${s.id}: ${newUUID}`);
+      }
+
+      dataToSync.push({
+        uuid: s.uuid,
+        quantity: s.quantity,
+        jenis: s.jenis,
+        keterangan: s.keterangan,
+        harga_beli: s.harga_beli,
+        tanggal: s.tanggal,
+
+        operator_id: s.operator_uuid,
+        item_id: s.item_uuid,
+      });
+    }
+
+    console.log("📤 Uploading stok:", dataToSync);
+
+    if (dataToSync.length === 0) {
+      console.warn("⚠️ No valid stok to sync");
+      return { success: false, table: "stok" };
+    }
+
+    const { data, error } = await supabase
+      .from("stok")
+      .upsert(dataToSync, { onConflict: "uuid" })
+      .select();
+
+    if (error) throw error;
+
+    console.log("✅ [STOK] Synced:", data);
+
+    unSyncedStok.forEach((s) => {
+      db.runSync("UPDATE stok SET synced = 1 WHERE id = ?", [s.id]);
+    });
+
+    console.log(`✅ [STOK] Synced ${unSyncedStok.length} records`);
+    return { success: true, synced: unSyncedStok.length, table: "stok" };
+  } catch (error) {
+    console.error("❌ [STOK] Sync error:", error);
+    return { success: false, error, table: "stok" };
+  }
+}
+
 // ============ SYNC ALL TABLES ============
 export async function syncAllTables() {
   console.log("\n🔄 ===== STARTING FULL SYNC =====");
@@ -338,6 +443,7 @@ export async function syncAllTables() {
     items: await syncItems(),
     transaksi: await syncTransaksi(),
     kas: await syncKas(),
+    stok: await syncStok(),
     timestamp: new Date().toISOString(),
   };
 
@@ -345,7 +451,8 @@ export async function syncAllTables() {
     (results.users.synced ?? 0) +
     (results.items.synced ?? 0) +
     (results.transaksi.synced ?? 0) +
-    (results.kas.synced ?? 0);
+    (results.kas.synced ?? 0) +
+    (results.stok.synced ?? 0);
 
   console.log("\n✅ ===== FULL SYNC COMPLETED =====");
   console.log("Total synced:", totalSynced);

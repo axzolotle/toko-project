@@ -9,7 +9,7 @@ import {
   getAllStok,
   getAllTransaksi,
   getAllUsers,
-  initDB,
+  initDB
 } from "../database/db2";
 
 const CURRENT_USER_KEY = "@toko_current_user_id";
@@ -24,6 +24,7 @@ export default function RootLayout() {
   const initDatabase = async () => {
     try {
       // 1. Initialize database schema
+
       initDB();
       console.log("✅ Database initialized");
 

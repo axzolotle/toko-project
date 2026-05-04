@@ -127,12 +127,15 @@ export function initDB() {
   db.execSync(
     "CREATE TABLE IF NOT EXISTS stok (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
+      "  uuid         TEXT UNIQUE," +
       "  item_id      INTEGER NOT NULL," +
       "  quantity      INTEGER NOT NULL," +
       "  jenis         TEXT NOT NULL CHECK(jenis IN ('masuk', 'keluar'))," +
       "  keterangan     TEXT DEFAULT ''," +
+      "  harga_beli    REAL DEFAULT 0," +
       "  tanggal        TEXT NOT NULL," +
       "  operator_id    INTEGER NOT NULL," +
+      "  synced        INTEGER DEFAULT 0," +
       "  FOREIGN KEY (item_id) REFERENCES items(id)," +
       "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
@@ -145,10 +148,11 @@ export function initDB() {
       "  item_id      INTEGER," +
       "  nama         TEXT NOT NULL," +
       "  jenis        TEXT NOT NULL," +
-      "  keterangan    TEXT DEFAULT ''," +
+      "  keterangan   TEXT DEFAULT ''," +
       "  jumlah        REAL NOT NULL," +
       "  tanggal       TEXT NOT NULL," +
       "  operator_id   INTEGER NOT NULL," +
+      "  synced        INTEGER DEFAULT 0," +
       "  FOREIGN KEY (item_id) REFERENCES items(id)," +
       "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
@@ -209,8 +213,8 @@ export function dropAllTables() {
   // db.execSync("DROP TABLE IF EXISTS users");
   // db.execSync("DROP TABLE IF EXISTS items");
   // db.execSync("DROP TABLE IF EXISTS transaksi");
-  // db.execSync("DROP TABLE IF EXISTS stok");
-  db.execSync("DROP TABLE IF EXISTS kas");
+  db.execSync("DROP TABLE IF EXISTS stok");
+  // db.execSync("DROP TABLE IF EXISTS kas");
 }
 
 export function createItem(
@@ -342,17 +346,18 @@ export function createUser(
   return result.lastInsertRowId;
 }
 
-export function createStok(
+export function insertStok(
   item_id: number,
   quantity: number,
   jenis: "masuk" | "keluar",
   keterangan: string,
+  harga_beli: number,
   operator_id: number,
 ): number {
   const tanggal = new Date().toISOString();
   const result = db.runSync(
-    "INSERT INTO stok (item_id, quantity, jenis, keterangan, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?)",
-    [item_id, quantity, jenis, keterangan, tanggal, operator_id],
+    "INSERT INTO stok (item_id, quantity, jenis, keterangan, harga_beli, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [item_id, quantity, jenis, keterangan, harga_beli, tanggal, operator_id],
   );
   return result.lastInsertRowId;
 }
@@ -371,6 +376,13 @@ export function updateItem(
     "UPDATE items SET nama=?, jenis=?, kategori=?, detail=?, harga_modal=?, harga_jual=?, quantity=?, synced=0 WHERE id=?",
     [nama, jenis, kategori, detail, harga_modal, harga_jual, quantity, id],
   );
+}
+
+export function updateItemQuantity(id: number, quantity: number) {
+  db.runSync("UPDATE items SET quantity=?, synced=0 WHERE id=?", [
+    quantity,
+    id,
+  ]);
 }
 
 export function getAllItems(): Item[] {
@@ -415,24 +427,6 @@ export function getItemByjenisandKategori(
 export function getItemById(id: number): Item | null {
   const result = db.getFirstSync("SELECT * FROM items WHERE id = ?", [id]);
   return (result as Item) || null;
-}
-
-export function updateStok(
-  item_id: number,
-  quantity: number,
-  jenis: "masuk" | "keluar",
-) {
-  if (jenis === "masuk") {
-    db.runSync("UPDATE items SET quantity = quantity + ? WHERE id = ?", [
-      quantity,
-      item_id,
-    ]);
-  } else {
-    db.runSync("UPDATE items SET quantity = quantity - ? WHERE id = ?", [
-      quantity,
-      item_id,
-    ]);
-  }
 }
 
 export function deleteItem(id: number) {

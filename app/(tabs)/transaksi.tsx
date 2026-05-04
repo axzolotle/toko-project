@@ -1,3 +1,5 @@
+import { createStok } from "@/service/Stok";
+import { useCurrentUser } from "@/service/useCurrentUser";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -18,9 +20,8 @@ import {
   Item,
 } from "../../database/db2";
 
-const OPERATOR_ID = 1; // Ganti dengan operator_id dari session
-
 export default function Transaksi() {
+  const { userId } = useCurrentUser();
   const [jenisList, setJenisList] = useState<string[]>([]);
   const [kategoriList, setKategoriList] = useState<string[]>([]);
   const [itemList, setItemList] = useState<Item[]>([]);
@@ -87,7 +88,15 @@ export default function Transaksi() {
     }
 
     try {
-      catatTransaksi(selectedItem, qty, OPERATOR_ID);
+      catatTransaksi(selectedItem, qty, userId);
+      createStok(
+        selectedItem.id,
+        qty,
+        "keluar",
+        `Penjualan ${qty} ${selectedItem.nama}`,
+        selectedItem.harga_modal,
+        userId,
+      );
       Alert.alert("Sukses", `${selectedItem.nama} x${qty} berhasil dicatat`);
       setShowModal(false);
       setSelectedItem(null);
@@ -212,7 +221,10 @@ export default function Transaksi() {
         onRequestClose={() => setShowModal(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
+          <ScrollView
+            style={s.modalContent}
+            showsVerticalScrollIndicator={false}
+          >
             <Text style={s.modalTitle}>Catat Transaksi</Text>
 
             {selectedItem && (
@@ -278,7 +290,7 @@ export default function Transaksi() {
                 </View>
               </>
             )}
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </ScrollView>
@@ -289,6 +301,7 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+    paddingTop: 12,
     paddingBottom: 20,
   },
 
@@ -309,10 +322,10 @@ const s = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+    justifyContent: "space-between",
   },
   gridItem: {
-    flex: 1,
-    minWidth: "31%",
+    width: "31%",
     backgroundColor: "#fff",
     borderRadius: 8,
     padding: 12,
@@ -420,9 +433,10 @@ const s = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 40,
-    maxHeight: "80%",
+    maxHeight: "90%",
   },
   modalTitle: {
     fontSize: 18,

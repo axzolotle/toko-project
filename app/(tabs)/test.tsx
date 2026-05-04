@@ -1,4 +1,5 @@
 import { createKas, createUser } from "@/database/db2";
+import { useCurrentUser } from "@/service/useCurrentUser";
 import { useState } from "react";
 import {
   Alert,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 
 export default function TestScreen() {
+  const { userId } = useCurrentUser();
   // User form state
   const [userName, setUserName] = useState("");
   const [userUsername, setUserUsername] = useState("");
@@ -60,7 +62,7 @@ export default function TestScreen() {
         return;
       }
 
-      createKas(kasNama, kasJenis, kasKeterangan, jumlah, 1); // operator_id = 1 (default)
+      createKas(kasNama, kasJenis, kasKeterangan, jumlah, userId);
       Alert.alert("Sukses", `Kas "${kasNama}" berhasil dibuat!`);
       console.log(
         `✅ Kas dibuat: ${kasNama} (${kasJenis}) - Jumlah: ${jumlah}`,
