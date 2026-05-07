@@ -1,3 +1,4 @@
+import { useSyncManager } from "@/service/Network";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
@@ -9,13 +10,13 @@ import {
   getAllStok,
   getAllTransaksi,
   getAllUsers,
-  initDB
+  initDB,
 } from "../database/db2";
 
 const CURRENT_USER_KEY = "@toko_current_user_id";
 
 export default function RootLayout() {
-  // useSyncManager();
+  useSyncManager();
   // dropAllTables(); // HATI-HATI: Ini akan menghapus semua data di database, gunakan hanya untuk testing!
   useEffect(() => {
     initDatabase();

@@ -466,6 +466,22 @@ export function getUserById(id: number): User | null {
   return result || null;
 }
 
+export function authenticateUser(username: string, password: string): User | null {
+  const result = db.getFirstSync<User>(
+    "SELECT * FROM users WHERE username = ? AND password = ? AND aktif = 1",
+    [username, password],
+  );
+  return result || null;
+}
+
+export function checkUsernameExists(username: string): boolean {
+  const result = db.getFirstSync<User>(
+    "SELECT id FROM users WHERE username = ?",
+    [username],
+  );
+  return result !== null;
+}
+
 export function ensureDefaultUser(): number {
   // Check if default user already exists
   const existingUser = db.getFirstSync<User>(

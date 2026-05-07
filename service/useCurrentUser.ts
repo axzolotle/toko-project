@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
+import { getUserById } from "@/database/db2";
+import type { User } from "@/database/db2";
 
 const CURRENT_USER_KEY = "@toko_current_user_id";
 
@@ -9,6 +11,7 @@ const CURRENT_USER_KEY = "@toko_current_user_id";
  */
 export function useCurrentUser() {
   const [userId, setUserId] = useState<number | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +22,13 @@ export function useCurrentUser() {
     try {
       const storedId = await AsyncStorage.getItem(CURRENT_USER_KEY);
       if (storedId) {
-        setUserId(parseInt(storedId, 10));
+        const id = parseInt(storedId, 10);
+        setUserId(id);
+        // Load user details from database
+        const userData = getUserById(id);
+        if (userData) {
+          setUser(userData);
+        }
       }
     } catch (error) {
       console.error("Error loading current user:", error);
@@ -32,14 +41,30 @@ export function useCurrentUser() {
     try {
       await AsyncStorage.setItem(CURRENT_USER_KEY, id.toString());
       setUserId(id);
+      const userData = getUserById(id);
+      if (userData) {
+        setUser(userData);
+      }
     } catch (error) {
       console.error("Error setting current user:", error);
     }
   };
 
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem(CURRENT_USER_KEY);
+      setUserId(null);
+      setUser(null);
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
   return {
     userId: userId || 3, // Default ke 3 jika belum set
+    user,
     loading,
     setCurrentUser,
+    logout,
   };
 }

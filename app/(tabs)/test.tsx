@@ -1,5 +1,6 @@
-import { createKas, createUser } from "@/database/db2";
+import { createKas } from "@/database/db2";
 import { useCurrentUser } from "@/service/useCurrentUser";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -12,41 +13,16 @@ import {
 } from "react-native";
 
 export default function TestScreen() {
+  const router = useRouter();
   const { userId } = useCurrentUser();
-  // User form state
-  const [userName, setUserName] = useState("");
-  const [userUsername, setUserUsername] = useState("");
-  const [userPassword, setUserPassword] = useState("");
-  const [userRole, setUserRole] = useState<"admin" | "operator">("operator");
-
   // Kas form state
   const [kasNama, setKasNama] = useState("");
   const [kasJenis, setKasJenis] = useState("");
   const [kasKeterangan, setKasKeterangan] = useState("");
   const [kasJumlah, setKasJumlah] = useState("");
 
-  const handleCreateUser = () => {
-    if (!userName || !userUsername || !userPassword) {
-      Alert.alert("Error", "Semua field harus diisi!");
-      return;
-    }
-
-    try {
-      createUser(userName, userUsername, userPassword, userRole);
-      Alert.alert("Sukses", `User "${userName}" berhasil dibuat!`);
-      console.log(
-        `✅ User dibuat: ${userName} (${userUsername}) - Role: ${userRole}`,
-      );
-
-      // Reset form
-      setUserName("");
-      setUserUsername("");
-      setUserPassword("");
-      setUserRole("operator");
-    } catch (error) {
-      console.error("Error creating user:", error);
-      Alert.alert("Error", "Gagal membuat user. Cek console untuk detail.");
-    }
+  const handleOpenLoginPage = () => {
+    router.push("/login");
   };
 
   const handleCreateKas = () => {
@@ -85,76 +61,18 @@ export default function TestScreen() {
         <Text style={styles.title}>🧪 TEST SCREEN - CREATE USER & KAS</Text>
       </View>
 
-      {/* USER FORM */}
+      {/* LOGIN BUTTON */}
       <View style={styles.formCard}>
-        <Text style={styles.formTitle}>👤 Buat User Baru</Text>
-
-        <Text style={styles.label}>Nama</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Masukkan nama user"
-          value={userName}
-          onChangeText={setUserName}
-        />
-
-        <Text style={styles.label}>Username</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Masukkan username"
-          value={userUsername}
-          onChangeText={setUserUsername}
-        />
-
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Masukkan password"
-          value={userPassword}
-          onChangeText={setUserPassword}
-          secureTextEntry
-        />
-
-        <Text style={styles.label}>Role</Text>
-        <View style={styles.roleContainer}>
-          <TouchableOpacity
-            style={[
-              styles.roleButton,
-              userRole === "admin" && styles.roleButtonActive,
-            ]}
-            onPress={() => setUserRole("admin")}
-          >
-            <Text
-              style={[
-                styles.roleButtonText,
-                userRole === "admin" && styles.roleButtonTextActive,
-              ]}
-            >
-              Admin
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.roleButton,
-              userRole === "operator" && styles.roleButtonActive,
-            ]}
-            onPress={() => setUserRole("operator")}
-          >
-            <Text
-              style={[
-                styles.roleButtonText,
-                userRole === "operator" && styles.roleButtonTextActive,
-              ]}
-            >
-              Operator
-            </Text>
-          </TouchableOpacity>
-        </View>
-
+        <Text style={styles.formTitle}>👤 Manajemen User</Text>
+        <Text style={styles.formDescription}>
+          Akses halaman login untuk membuat user baru atau masuk ke akun yang
+          sudah ada.
+        </Text>
         <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleCreateUser}
+          style={styles.loginButton}
+          onPress={handleOpenLoginPage}
         >
-          <Text style={styles.submitButtonText}>Buat User</Text>
+          <Text style={styles.loginButtonText}>Buka Halaman Login</Text>
         </TouchableOpacity>
       </View>
 
@@ -244,6 +162,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     borderBottomWidth: 1,
   },
+  formDescription: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
   label: {
     fontSize: 14,
     fontWeight: "600",
@@ -259,6 +183,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     backgroundColor: "#f9f9f9",
+  },
+  loginButton: {
+    paddingVertical: 14,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  loginButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
   },
   roleContainer: {
     flexDirection: "row",

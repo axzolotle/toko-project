@@ -34,7 +34,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="transaksi"
+        name="transaction"
         options={{
           title: "Transaksi",
           tabBarIcon: ({ color, focused }) => (
