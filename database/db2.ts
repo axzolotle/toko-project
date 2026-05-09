@@ -209,6 +209,20 @@ export function insertTestData() {
   }
 }
 
+export function insertDataDummy() {
+  db.runSync(
+    `
+    INSERT INTO users (uuid, nama, username, password, role, aktif, synced) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [uuid.v4(), "Dummy User", "dummy", "password", "user", 1, 0],
+  );
+}
+
+export function clearData(
+  database: "users" | "items" | "transaksi" | "stok" | "kas",
+) {
+  db.execSync(`DELETE FROM ${database}`);
+}
+
 export function dropAllTables() {
   // db.execSync("DROP TABLE IF EXISTS users");
   // db.execSync("DROP TABLE IF EXISTS items");
@@ -466,7 +480,10 @@ export function getUserById(id: number): User | null {
   return result || null;
 }
 
-export function authenticateUser(username: string, password: string): User | null {
+export function authenticateUser(
+  username: string,
+  password: string,
+): User | null {
   const result = db.getFirstSync<User>(
     "SELECT * FROM users WHERE username = ? AND password = ? AND aktif = 1",
     [username, password],

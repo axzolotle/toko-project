@@ -1,34 +1,34 @@
 import {
-    darkColors,
-    darkStyles,
-    lightColors,
-    lightStyles,
+  darkColors,
+  darkStyles,
+  lightColors,
+  lightStyles,
 } from "@/styles/ItemListStyles";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    useColorScheme,
-    View,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useColorScheme,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-    createItem,
-    createKasForItem,
-    getAllItems,
-    Item,
-} from "../../database/db2";
-import { createStok } from "../../service/Stok";
-import { useCurrentUser } from "../../service/useCurrentUser";
+  createItem,
+  createKasForItem,
+  getAllItems,
+  Item,
+} from "../database/db2";
+import { createStok } from "../service/Stok";
+import { useCurrentUser } from "../service/useCurrentUser";
 
 const JENIS_PRESET = ["Makanan", "Minuman", "Snack", "Rokok", "Sembako"];
 
@@ -453,12 +453,7 @@ export default function BarangScreen() {
         </View>
       </>
     );
-  }
-
-  // ============================================================
-  // RENDER: FORM VIEW
-  // ============================================================
-  return (
+  } else {
     <>
       <SafeAreaView>
         <StatusBar
@@ -1061,6 +1056,6 @@ export default function BarangScreen() {
           </View>
         </Modal>
       </SafeAreaView>
-    </>
-  );
+    </>;
+  }
 }

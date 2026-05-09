@@ -72,6 +72,8 @@ export const darkColors: typeof lightColors = {
   divider: "#243622",
 
   shadow: "#000000",
+  red: "",
+  blue: "",
 };
 
 // ============================================================
@@ -196,11 +198,6 @@ export const createStyles = (c: typeof lightColors) =>
       fontSize: 12,
       color: c.subtitleText,
       fontWeight: "600",
-    },
-
-    stepWrapper: {
-      marginTop: 20,
-      marginBottom: 8,
     },
 
     // GRID

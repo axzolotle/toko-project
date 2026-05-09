@@ -1,40 +1,107 @@
 import {
-  catatTransaksi,
-  getItemByjenisandKategori,
-  getJenisItems,
-  getKategoriItems,
-  Item,
+    catatTransaksi,
+    getItemByjenisandKategori,
+    getJenisItems,
+    getKategoriItems,
+    Item,
 } from "@/database/db2";
 import { createStok } from "@/service/Stok";
 import { useCurrentUser } from "@/service/useCurrentUser";
-import {
-  createStyles,
-  darkColors,
-  lightColors,
-} from "@/styles/TransactionStyle";
-import { Ionicons } from "@expo/vector-icons";
+import { createStyles, darkColors, lightColors } from "@/styles/KasirStyles";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useColorScheme,
-  View,
+    Alert,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Step = 1 | 2 | 3;
+
+// ============================================================
+// HELPER SUB-COMPONENTS
+// ============================================================
+
+interface HeaderProps {
+  subtitle: string;
+  S: any;
+}
+
+const KasirHeader: React.FC<HeaderProps> = ({ subtitle, S }) => (
+  <View style={S.header}>
+    <View>
+      <Text style={S.headerTitle}>Kasir</Text>
+      <Text style={S.headerSubtitle}>{subtitle}</Text>
+    </View>
+    <TouchableOpacity style={S.fabButton} activeOpacity={0.8}>
+      <Text style={S.fabText}>☀</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+interface StepIndicatorProps {
+  step: 1 | 2 | 3;
+  S: any;
+}
+
+const StepIndicator: React.FC<StepIndicatorProps> = ({ step, S }) => {
+  const labels: Record<number, string> = { 1: "jenis", 2: "item", 3: "catat" };
+
+  const Circle = ({ n }: { n: 1 | 2 | 3 }) => {
+    if (n < step)
+      return (
+        <View style={S.circleCompleted}>
+          <Text style={S.stepCheck}>✓</Text>
+        </View>
+      );
+    if (n === step)
+      return (
+        <View style={S.circleActive}>
+          <Text style={S.stepNumActive}>{n}</Text>
+        </View>
+      );
+    return (
+      <View style={S.circleInactive}>
+        <Text style={S.stepNumInactive}>{n}</Text>
+      </View>
+    );
+  };
+
+  const Line = ({ pos }: { pos: number }) =>
+    pos < step ? (
+      <View style={S.lineActive} />
+    ) : (
+      <View style={S.lineInactive} />
+    );
+
+  return (
+    <View style={S.stepRow}>
+      <Circle n={1} />
+      <Line pos={1} />
+      <Circle n={2} />
+      <Line pos={2} />
+      <Circle n={3} />
+      <Text style={S.stepLabel}>{labels[step]}</Text>
+    </View>
+  );
+};
+
+// ============================================================
+// MAIN SCREEN
+// ============================================================
 
 export default function TransactionScreen() {
   const { userId } = useCurrentUser();
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const C = isDark ? darkColors : lightColors;
-  const s = isDark ? createStyles(darkColors) : createStyles(lightColors);
+  const S = isDark ? createStyles(darkColors) : createStyles(lightColors);
 
   // ── STATE MANAGEMENT ──
   const [jenisList, setJenisList] = useState<string[]>([]);
@@ -154,129 +221,110 @@ export default function TransactionScreen() {
     }
   };
 
-  const handleCancel = () => {
-    setCurrentStep(1);
-    setSelectedJenis("");
-    setSelectedKategori("");
-    setItemList([]);
-    setSelectedItem(null);
-    setQuantity("1");
-  };
-
-  // ── RENDER STEP 1: CHOOSE JENIS ──
+  // ── RENDER STEP 1: PILIH JENIS ──
   const renderStep1 = () => {
     return (
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.scrollContent}
-      >
-        {/* SECTION */}
-        <View style={s.sectionHeader}>
-          <Text style={s.sectionHeaderText}>PILIH JENIS TRANSAKSI</Text>
-        </View>
+      <>
+        <KasirHeader subtitle="pilih jenis transaksi" S={S} />
+        <StepIndicator step={1} S={S} />
 
-        {/* GRID */}
-        <View style={s.grid}>
-          {jenisList.map((jenis, index) => (
-            <TouchableOpacity
-              key={jenis}
-              style={s.categoryCard}
-              onPress={() => handleSelectJenis(jenis)}
-              activeOpacity={0.7}
-            >
-              <View style={s.categoryIconWrapper}>
-                <Text style={s.categoryIcon}>
-                  {index === 0
-                    ? "📦"
-                    : index === 1
-                      ? "📱"
-                      : index === 2
-                        ? "💳"
-                        : "🏦"}
-                </Text>
-              </View>
-              <Text style={s.categoryTitle}>{jenis}</Text>
-              <Text style={s.categoryMeta}>
-                {kategoriList.length || index + 1} item
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+        <ScrollView
+          style={S.scroll}
+          contentContainerStyle={S.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={S.sectionLabel}>Pilih Jenis</Text>
+
+          <View style={S.typeGrid}>
+            {jenisList.map((jenis, index) => {
+              const emojis = ["📦", "📱", "💳", "🏦"];
+              return (
+                <TouchableOpacity
+                  key={jenis}
+                  style={S.typeCard}
+                  onPress={() => handleSelectJenis(jenis)}
+                  activeOpacity={0.75}
+                >
+                  <View style={S.typeIconBox}>
+                    <Text style={S.typeIconEmoji}>{emojis[index] || "📦"}</Text>
+                  </View>
+                  <Text style={S.typeTitle}>{jenis}</Text>
+                  <Text style={S.typeCount}>
+                    {kategoriList.length || index + 1} item
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </>
     );
   };
 
-  // ── RENDER STEP 2: CHOOSE ITEM ──
+  // ── RENDER STEP 2: PILIH ITEM ──
   const renderStep2 = () => {
     return (
-      <View style={{ flex: 1 }}>
-        {/* BACK ROW */}
-        <View style={s.backRow}>
-          <TouchableOpacity
-            onPress={handleBackFromStep2}
-            style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-          >
-            <Text style={s.backArrow}>
-              <Ionicons name="arrow-back" size={18} />
-            </Text>
-            <Text style={s.backText}>{selectedJenis}</Text>
-          </TouchableOpacity>
-        </View>
+      <>
+        <KasirHeader subtitle="pilih item" S={S} />
+        <StepIndicator step={2} S={S} />
 
-        {/* FILTER CHIPS */}
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{
-            ...s.filterRow,
-            flexGrow: 1,
-            alignItems: "center",
-          }}
-        >
-          {kategoriList.map((kategori) => (
-            <TouchableOpacity
-              key={kategori}
-              style={[
-                selectedKategori === kategori ? s.filterActive : s.filterChip,
-              ]}
-              onPress={() => setSelectedKategori(kategori)}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  selectedKategori === kategori
-                    ? s.filterActiveText
-                    : s.filterChipText,
-                ]}
-              >
-                {kategori}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* PRODUCT LIST */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={s.scrollContent}
+          style={S.scroll}
+          contentContainerStyle={S.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Back nav */}
+          <TouchableOpacity
+            style={S.backNav}
+            onPress={handleBackFromStep2}
+            activeOpacity={0.7}
+          >
+            <Text style={S.backArrow}>←</Text>
+            <Text style={S.backText}>{selectedJenis}</Text>
+          </TouchableOpacity>
+
+          {/* Filter chips */}
+          <View style={S.filterRow}>
+            {kategoriList.map((kategori, i) =>
+              i === 0 || selectedKategori === kategori ? (
+                <TouchableOpacity
+                  key={kategori}
+                  style={S.chipActive}
+                  onPress={() => setSelectedKategori(kategori)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={S.chipActiveText}>{kategori}</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  key={kategori}
+                  style={S.chip}
+                  onPress={() => setSelectedKategori(kategori)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={S.chipText}>{kategori}</Text>
+                </TouchableOpacity>
+              ),
+            )}
+          </View>
+
+          {/* Product rows */}
           {itemList.length > 0 ? (
             itemList.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={s.productCard}
+                style={S.productCard}
                 onPress={() => handleSelectItem(item)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
               >
-                <View style={s.productDot} />
-                <View style={s.productContent}>
-                  <Text style={s.productTitle}>{item.nama}</Text>
-                  <Text style={s.productMeta}>
+                <View style={S.productDot} />
+                <View style={S.productInfo}>
+                  <Text style={S.productName}>{item.nama}</Text>
+                  <Text style={S.productDesc}>
                     {item.kategori} • {item.detail}
                   </Text>
                 </View>
-                <Text style={s.productPrice}>
+                <Text style={S.productPrice}>
                   Rp {item.harga_jual.toLocaleString("id-ID")}
                 </Text>
               </TouchableOpacity>
@@ -287,30 +335,32 @@ export default function TransactionScreen() {
                 flex: 1,
                 justifyContent: "center",
                 alignItems: "center",
-                paddingVertical: 40,
+                paddingVertical: 60,
               }}
             >
-              <Text style={{ fontSize: 24, marginBottom: 8 }}>🔍</Text>
+              <Text style={{ fontSize: 32, marginBottom: 12 }}>🔍</Text>
               <Text
                 style={{
                   fontSize: 16,
-                  color: C.itemMeta,
                   fontWeight: "600",
+                  color: C.productDesc,
                 }}
               >
                 Tidak ada item
               </Text>
-              <Text style={{ fontSize: 12, color: C.itemMeta, marginTop: 4 }}>
+              <Text
+                style={{ fontSize: 12, color: C.productDesc, marginTop: 6 }}
+              >
                 Pilih kategori untuk melihat item
               </Text>
             </View>
           )}
         </ScrollView>
-      </View>
+      </>
     );
   };
 
-  // ── RENDER STEP 3: CONFIRMATION ──
+  // ── RENDER STEP 3: KONFIRMASI ──
   const renderStep3 = () => {
     if (!selectedItem) return null;
 
@@ -319,233 +369,177 @@ export default function TransactionScreen() {
     const totalLaba = profit * (parseInt(quantity, 10) || 0);
 
     return (
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.scrollContent}
-      >
-        {/* CONFIRM CARD */}
-        <View style={s.confirmCard}>
-          <View style={s.confirmBadgeRow}>
-            <Text style={s.confirmEmoji}>📦</Text>
+      <>
+        <KasirHeader subtitle="konfirmasi & catat" S={S} />
+        <StepIndicator step={3} S={S} />
 
-            <View style={s.badgePrimary}>
-              <Text style={s.badgePrimaryText}>{selectedJenis}</Text>
+        <ScrollView
+          style={S.scroll}
+          contentContainerStyle={S.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back nav */}
+          <TouchableOpacity
+            style={S.backNav}
+            onPress={handleBackFromStep3}
+            activeOpacity={0.7}
+          >
+            <Text style={S.backArrow}>←</Text>
+            <Text style={S.backText}>Pilih item lain</Text>
+          </TouchableOpacity>
+
+          {/* Confirmation card */}
+          <View style={S.confirmCard}>
+            {/* Emoji + badges */}
+            <View style={S.confirmTopRow}>
+              <Text style={S.confirmEmoji}>📦</Text>
+              <View style={S.badgeGreen}>
+                <Text style={S.badgeGreenText}>{selectedJenis}</Text>
+              </View>
+              <View style={S.badgeNeutral}>
+                <Text style={S.badgeNeutralText}>{selectedKategori}</Text>
+              </View>
             </View>
 
-            <View style={s.badgeSecondary}>
-              <Text style={s.badgeSecondaryText}>{selectedKategori}</Text>
-            </View>
-          </View>
+            {/* Product name */}
+            <Text style={S.confirmName}>{selectedItem.nama}</Text>
+            <Text style={S.confirmDesc}>{selectedItem.detail}</Text>
 
-          <Text style={s.confirmTitle}>{selectedItem.nama}</Text>
-          <Text style={s.confirmDesc}>{selectedItem.detail}</Text>
+            {/* Divider */}
+            <View style={S.confirmDivider} />
 
-          <View style={s.confirmDivider} />
-
-          <View style={s.confirmBottom}>
-            <View style={s.confirmLeft}>
-              <Text style={s.confirmLabel}>harga jual</Text>
-              <Text style={s.confirmLabel}>modal</Text>
-              <Text style={s.confirmLabel}>laba</Text>
-            </View>
-
-            <View style={s.confirmRight}>
-              <Text style={s.confirmPrice}>
+            {/* Price rows */}
+            <View style={S.priceRow}>
+              <Text style={S.priceLabel}>harga jual</Text>
+              <Text style={S.hargaValue}>
                 Rp {selectedItem.harga_jual.toLocaleString("id-ID")}
               </Text>
-              <Text style={s.confirmModal}>
+            </View>
+            <View style={S.priceRow}>
+              <Text style={S.priceLabel}>modal</Text>
+              <Text style={S.modalValue}>
                 Rp {(selectedItem.harga_modal || 0).toLocaleString("id-ID")}
               </Text>
-              <Text style={s.confirmProfit}>
+            </View>
+            <View style={S.priceRow}>
+              <Text style={S.priceLabel}>laba</Text>
+              <Text style={S.labaValue}>
                 + Rp {profit.toLocaleString("id-ID")}
               </Text>
             </View>
           </View>
-        </View>
 
-        {/* QUANTITY INPUT */}
-        <View
-          style={{ paddingHorizontal: 18, marginTop: 16, marginBottom: 20 }}
-        >
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: C.itemTitle,
-              marginBottom: 8,
-            }}
-          >
-            Jumlah
-          </Text>
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: C.cardBorder,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              fontSize: 14,
-              color: C.itemTitle,
-              backgroundColor: C.cardBg,
-            }}
-            value={quantity}
-            onChangeText={setQuantity}
-            placeholder="Masukkan jumlah"
-            placeholderTextColor={C.itemMeta}
-            keyboardType="numeric"
-            maxLength={4}
-          />
-        </View>
-
-        {/* TOTAL SUMMARY */}
-        <View style={{ paddingHorizontal: 18, marginBottom: 24 }}>
+          {/* Quantity input */}
           <View
-            style={{
-              backgroundColor: C.pageBg,
-              borderRadius: 8,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: C.cardBorder,
-            }}
+            style={{ paddingHorizontal: 20, marginTop: 20, marginBottom: 16 }}
           >
-            <View
+            <Text
               style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
+                fontSize: 13,
+                fontWeight: "600",
+                color: C.confirmLabel,
                 marginBottom: 8,
               }}
             >
-              <Text style={{ fontSize: 12, color: C.itemMeta }}>
-                Total Harga
-              </Text>
-              <Text
-                style={{ fontSize: 16, fontWeight: "bold", color: C.itemPrice }}
-              >
-                Rp {totalHarga.toLocaleString("id-ID")}
-              </Text>
-            </View>
+              Jumlah
+            </Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: C.typeCardBorder,
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 14,
+                color: C.confirmName,
+                backgroundColor: C.typeCardBg,
+              }}
+              value={quantity}
+              onChangeText={setQuantity}
+              placeholder="Masukkan jumlah"
+              placeholderTextColor={C.productDesc}
+              keyboardType="numeric"
+              maxLength={4}
+            />
+          </View>
+
+          {/* Total summary */}
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
             <View
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
+              style={{
+                backgroundColor: C.typeCardBg,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: C.typeCardBorder,
+                padding: 14,
+              }}
             >
-              <Text style={{ fontSize: 12, color: C.itemPrice }}>
-                Total Keuntungan
-              </Text>
-              <Text
-                style={{ fontSize: 14, fontWeight: "bold", color: C.itemPrice }}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
               >
-                + Rp {totalLaba.toLocaleString("id-ID")}
-              </Text>
+                <Text style={{ fontSize: 12, color: C.productDesc }}>
+                  Total Harga
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "700",
+                    color: C.confirmLaba,
+                  }}
+                >
+                  Rp {totalHarga.toLocaleString("id-ID")}
+                </Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text style={{ fontSize: 12, color: C.confirmLaba }}>
+                  Total Keuntungan
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "700",
+                    color: C.confirmLaba,
+                  }}
+                >
+                  + Rp {totalLaba.toLocaleString("id-ID")}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          <Text style={{ fontSize: 12, color: C.itemMeta, marginTop: 12 }}>
-            Stok Tersedia: {selectedItem.quantity} unit
-          </Text>
-        </View>
-      </ScrollView>
-    );
-  };
-
-  // ── RENDER HEADER ──
-  const renderHeader = () => {
-    const titles = ["Kasir", "Kasir", "Kasir"];
-    const subtitles = [
-      "pilih jenis transaksi",
-      "pilih item",
-      "konfirmasi & catat",
-    ];
-
-    return (
-      <View style={s.header}>
-        <View>
-          <Text style={s.title}>{titles[currentStep - 1]}</Text>
-          <Text style={s.subtitle}>{subtitles[currentStep - 1]}</Text>
-        </View>
-
-        <TouchableOpacity style={s.themeButton}>
-          <Text style={s.themeButtonIcon}>☀</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  // ── RENDER STEP INDICATOR ──
-  const renderStepIndicator = () => {
-    return (
-      <View style={s.stepWrapper}>
-        <View style={s.stepRow}>
-          <View style={[s.stepActive, currentStep !== 1 && s.stepInactive]}>
-            <Text
-              style={[
-                s.stepActiveText,
-                currentStep !== 1 && s.stepInactiveText,
-              ]}
-            >
-              {currentStep > 1 ? "✓" : "1"}
+            <Text style={{ fontSize: 12, color: C.productDesc, marginTop: 12 }}>
+              Stok Tersedia: {selectedItem.quantity} unit
             </Text>
           </View>
+        </ScrollView>
 
-          <View style={s.stepLine} />
-
-          <View style={[s.stepActive, currentStep !== 2 && s.stepInactive]}>
-            <Text
-              style={[
-                s.stepActiveText,
-                currentStep !== 2 && s.stepInactiveText,
-              ]}
-            >
-              {currentStep > 2 ? "✓" : "2"}
-            </Text>
-          </View>
-
-          <View style={s.stepLine} />
-
-          <View style={[s.stepActive, currentStep !== 3 && s.stepInactive]}>
-            <Text
-              style={[
-                s.stepActiveText,
-                currentStep !== 3 && s.stepInactiveText,
-              ]}
-            >
-              3
-            </Text>
-          </View>
-
-          <Text style={s.stepLabel}>
-            {currentStep === 1 ? "jenis" : currentStep === 2 ? "item" : "catat"}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  // ── RENDER FOOTER BUTTONS ──
-  const renderFooterButtons = () => {
-    if (currentStep === 1) return null;
-
-    if (currentStep === 3) {
-      return (
-        <View style={{ paddingHorizontal: 18, paddingBottom: 20, gap: 12 }}>
+        {/* Fixed bottom buttons */}
+        <View style={S.bottomArea}>
           <TouchableOpacity
-            style={s.primaryButton}
+            style={S.btnPrimary}
             onPress={handleConfirmTransaction}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
           >
-            <Text style={s.primaryButtonText}>Catat penjualan</Text>
+            <Text style={S.btnPrimaryText}>Catat penjualan</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
-            style={s.secondaryButton}
+            style={S.btnSecondary}
             onPress={handleBackFromStep3}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
-            <Text style={s.secondaryButtonText}>Kembali</Text>
+            <Text style={S.btnSecondaryText}>Kembali</Text>
           </TouchableOpacity>
         </View>
-      );
-    }
-
-    return null;
+      </>
+    );
   };
 
   // ── MAIN RENDER ──
@@ -555,22 +549,13 @@ export default function TransactionScreen() {
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={C.headerBg}
       />
-      <SafeAreaView style={s.screen}>
-        <View
-          style={{ paddingHorizontal: 18, paddingTop: 18, paddingBottom: 12 }}
-        >
-          {renderHeader()}
-          {renderStepIndicator()}
-        </View>
-
-        <View style={{ flex: 1 }}>
+      <View style={S.screen}>
+        <SafeAreaView style={S.safeArea}>
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
-        </View>
-
-        {renderFooterButtons()}
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </>
   );
 }
