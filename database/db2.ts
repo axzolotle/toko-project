@@ -209,7 +209,6 @@ export function initDB() {
     "CREATE TABLE IF NOT EXISTS kas (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
       "  uuid         TEXT UNIQUE," +
-      "  item_id      INTEGER," +
       "  nama         TEXT NOT NULL," +
       "  jenis        TEXT NOT NULL," +
       "  keterangan   TEXT DEFAULT ''," +
@@ -217,7 +216,6 @@ export function initDB() {
       "  tanggal       TEXT NOT NULL," +
       "  operator_id   INTEGER NOT NULL," +
       "  synced        INTEGER DEFAULT 0," +
-      "  FOREIGN KEY (item_id) REFERENCES items(id)," +
       "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
@@ -661,12 +659,160 @@ export function insertTestData() {
   }
 }
 
-export function insertDataDummy() {
-  db.runSync(
-    `
-    INSERT INTO users (uuid, nama, username, password, role, aktif, synced) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [uuid.v4(), "Dummy User", "dummy", "password", "user", 1, 0],
-  );
+export function seedDummyKonterData() {
+  try {
+    // db.execSync("PRAGMA foreign_keys = ON;");
+
+    // db.execSync("BEGIN TRANSACTION;");
+
+    // =========================
+    // USERS
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO users (uuid, nama, username, password, role, aktif, synced)
+    //   VALUES
+    //   (NULL, 'Fadillah Akbar', 'fadiell', '123456', 'admin', 1, 0),
+    //   (NULL, 'Rizky Pratama', 'rizky', '123456', 'operator', 1, 0),
+    //   (NULL, 'Nadia Putri', 'nadia', '123456', 'operator', 1, 0);
+    // `);
+
+    // =========================
+    // ITEMS KONTER
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO items
+    //   (uuid, nama, jenis, kategori, detail, harga_modal, harga_jual, quantity, aktif, synced, created_by)
+    //   VALUES
+    //   (NULL, 'Pulsa Telkomsel 5K', 'Pulsa', 'Telkomsel', 'Reguler', 4800, 6000, 50, 1, 0, 1),
+    //   (NULL, 'Pulsa Telkomsel 10K', 'Pulsa', 'Telkomsel', 'Reguler', 9500, 11000, 45, 1, 0, 1),
+    //   (NULL, 'Pulsa XL 10K', 'Pulsa', 'XL', 'Reguler', 9500, 11000, 35, 1, 0, 2),
+    //   (NULL, 'Pulsa Indosat 10K', 'Pulsa', 'Indosat', 'Reguler', 9600, 11000, 30, 1, 0, 2),
+
+    //   (NULL, 'Paket Axis 1.5GB', 'Data', 'Axis', '3 Hari', 12000, 15000, 20, 1, 0, 2),
+    //   (NULL, 'Paket XL 5GB', 'Data', 'XL', '7 Hari', 25000, 30000, 15, 1, 0, 1),
+    //   (NULL, 'Paket Telkomsel 3GB', 'Data', 'Telkomsel', '5 Hari', 22000, 27000, 18, 1, 0, 1),
+
+    //   (NULL, 'Lampu LED 10 Watt', 'Lampu', 'LED', 'Putih', 7000, 10000, 20, 1, 0, 1),
+    //   (NULL, 'Lampu LED 20 Watt', 'Lampu', 'LED', 'Putih', 17000, 20000, 15, 1, 0, 1),
+    //   (NULL, 'Lampu LED 30 Watt', 'Lampu', 'LED', 'Putih', 27000, 30000, 10, 1, 0, 1),
+
+    //   (NULL, 'Kabel Type-C', 'Kabel', 'Charger', '1 Meter', 12000, 15000, 25, 1, 0, 2),
+    //   (NULL, 'Kabel Lightning', 'Kabel', 'Charger', 'iPhone', 22000, 25000, 12, 1, 0, 2),
+    //   (NULL, 'Charger 2A', 'Charger', 'Adaptor', 'Android', 27000, 30000, 10, 1, 0, 3),
+
+    //   (NULL, 'Headset Kabel', 'Headset', 'Audio', 'Bass', 17000, 20000, 18, 1, 0, 3),
+    //   (NULL, 'TWS F9', 'TWS', 'Audio', 'Bluetooth', 47000, 50000, 12, 1, 0, 3),
+
+    //   (NULL, 'Case Samsung A14', 'Case HP', 'Samsung', 'Softcase', 12000, 15000, 10, 1, 0, 2),
+    //   (NULL, 'Case iPhone 11', 'Case HP', 'iPhone', 'Silicon', 17000, 20000, 8, 1, 0, 2),
+
+    //   (NULL, 'Free Fire 70 Diamond', 'Top Up Game', 'Free Fire', 'Instant', 9000, 12000, 999, 1, 0, 1),
+    //   (NULL, 'Mobile Legends 86 Diamond', 'Top Up Game', 'Mobile Legends', 'Instant', 17000, 20000, 999, 1, 0, 1),
+
+    //   (NULL, 'Token PLN 20K', 'Token', 'PLN', 'Prabayar', 20000, 23000, 999, 1, 0, 2),
+    //   (NULL, 'Token PLN 50K', 'Token', 'PLN', 'Prabayar', 50000, 53000, 999, 1, 0, 2),
+
+    //   (NULL, 'Transfer BCA', 'Transfer', 'Bank', 'Jasa transfer', 2000, 5000, 999, 1, 0, 1),
+    //   (NULL, 'Transfer DANA', 'Transfer', 'E-Wallet', 'Jasa transfer', 1000, 3000, 999, 1, 0, 1);
+    // `);
+
+    // =========================
+    // TRANSAKSI
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO transaksi
+    //   (uuid, item_id, item_nama, item_jenis, item_kategori, item_detail,
+    //    harga_jual, harga_modal, quantity, total, laba, tanggal, synced, operator_id)
+    //   VALUES
+    //   (NULL, 1, 'Pulsa Telkomsel 5K', 'Pulsa', 'Telkomsel', 'Reguler', 6000, 4800, 2, 12000, 2400, '2026-05-17 08:10:00', 0, 2),
+    //   (NULL, 8, 'Lampu LED 10 Watt', 'Lampu', 'LED', 'Putih', 10000, 7000, 1, 10000, 3000, '2026-05-17 08:45:00', 0, 3),
+    //   (NULL, 11, 'Kabel Type-C', 'Kabel', 'Charger', '1 Meter', 15000, 12000, 1, 15000, 3000, '2026-05-17 09:20:00', 0, 2),
+    //   (NULL, 18, 'Free Fire 70 Diamond', 'Top Up Game', 'Free Fire', 'Instant', 12000, 9000, 1, 12000, 3000, '2026-05-17 10:00:00', 0, 2),
+    //   (NULL, 20, 'Token PLN 20K', 'Token', 'PLN', 'Prabayar', 23000, 20000, 1, 23000, 3000, '2026-05-17 11:30:00', 0, 3),
+    //   (NULL, 22, 'Transfer BCA', 'Transfer', 'Bank', 'Jasa transfer', 5000, 2000, 1, 5000, 3000, '2026-05-17 13:00:00', 0, 2);
+    // `);
+
+    // =========================
+    // STOK
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO stok
+    //   (uuid, item_id, quantity, jenis, keterangan, harga_beli, tanggal, operator_id, synced)
+    //   VALUES
+    //   (NULL, 8, 20, 'masuk', 'Restok lampu 10 watt', 7000, '2026-05-16 08:00:00', 1, 0),
+    //   (NULL, 9, 15, 'masuk', 'Restok lampu 20 watt', 17000, '2026-05-16 08:15:00', 1, 0),
+    //   (NULL, 11, 25, 'masuk', 'Restok kabel Type-C', 12000, '2026-05-16 09:00:00', 1, 0),
+    //   (NULL, 15, 12, 'masuk', 'Restok TWS', 47000, '2026-05-16 10:00:00', 1, 0),
+
+    //   (NULL, 8, 1, 'keluar', 'Penjualan', 7000, '2026-05-17 08:45:00', 3, 0),
+    //   (NULL, 11, 1, 'keluar', 'Penjualan', 12000, '2026-05-17 09:20:00', 2, 0);
+    // `);
+
+    // =========================
+    // KAS
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO kas
+    //   (uuid, nama, jenis, keterangan, jumlah, tanggal, operator_id, synced)
+    //   VALUES
+    //   (NULL, 'Penjualan Pulsa Telkomsel 5K', 'masuk', 'Transaksi penjualan', 12000, '2026-05-17 08:10:00', 2, 0),
+    //   (NULL, 'Penjualan Lampu LED 10 Watt', 'masuk', 'Transaksi penjualan', 10000, '2026-05-17 08:45:00', 3, 0),
+    //   (NULL, 'Penjualan Kabel Type-C', 'masuk', 'Transaksi penjualan', 15000, '2026-05-17 09:20:00', 2, 0),
+    //   (NULL, 'Top Up Free Fire', 'masuk', 'Transaksi penjualan', 12000, '2026-05-17 10:00:00', 2, 0),
+    //   (NULL, 'Beli plastik kecil', 'keluar', 'Operasional toko', 10000, '2026-05-17 12:30:00', 1, 0);
+    // `);
+
+    // =========================
+    // REKAP KAS
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO RekapKas
+    //   (uuid, nama, kas_id, jumlah, tanggal, operator_id, synced)
+    //   VALUES
+    //   (NULL, 'Rekap kas penjualan pulsa', 1, 12000, '2026-05-17', 2, 0),
+    //   (NULL, 'Rekap kas penjualan lampu', 2, 10000, '2026-05-17', 3, 0),
+    //   (NULL, 'Rekap kas penjualan kabel', 3, 15000, '2026-05-17', 2, 0),
+    //   (NULL, 'Rekap kas top up game', 4, 12000, '2026-05-17', 2, 0),
+    //   (NULL, 'Rekap kas operasional', 5, 10000, '2026-05-17', 1, 0);
+    // `);
+
+    // =========================
+    // KERUGIAN
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO kerugian
+    //   (keterangan, jumlah, operator_id, tanggal)
+    //   VALUES
+    //   ('Selisih uang kas kecil', 5000, 1, '2026-05-17 18:00:00');
+    // `);
+
+    // =========================
+    // OPERASIONAL
+    // =========================
+    // db.execSync(`
+    //   INSERT INTO operasional
+    //   (keterangan, jumlah, operator_id, tanggal)
+    //   VALUES
+    //   ('Beli plastik kecil', 10000, 1, '2026-05-17 12:30:00'),
+    //   ('Beli pulpen nota', 8000, 1, '2026-05-17 13:00:00');
+    // `);
+
+    // =========================
+    // REKAP HARIAN
+    // =========================
+    db.execSync(`
+      INSERT INTO rekap_harian
+      (tanggal, omzet, hpp, laba_kotor, operasional, kerugian, laba_bersih, locked, created_by, created_at, synced)
+      VALUES
+      ('2026-05-17', 84000, 67500, 16500, 18000, 5000, -6500, 0, 1, '2026-05-17 23:00:00', 0);
+    `);
+
+    // db.execSync("COMMIT;");
+    console.log("✅ Dummy data konter berhasil ditambahkan");
+  } catch (error) {
+    // db.execSync("ROLLBACK;");
+    console.error("❌ Error seed dummy konter data:", error);
+  }
 }
 
 export function clearData(
@@ -784,7 +930,7 @@ export function updateKasQuantity(
   return result.lastInsertRowId;
 }
 
-export function createKasForItem(
+export function createStokForItem(
   item_id: number,
   item_nama: string,
   operator_id: number,

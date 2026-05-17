@@ -6,6 +6,7 @@ import {
   lightStyles,
 } from "@/styles/LoginStyles";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -35,8 +36,9 @@ export default function LoginScreen() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
 
-  const S = useColorScheme() === "dark" ? darkStyles : lightStyles;
-  const C = useColorScheme() === "dark" ? darkColors : lightColors;
+  const isDark = useTheme();
+  const S = isDark ? darkStyles : lightStyles;
+  const C = isDark ? darkColors : lightColors;
 
   const handleLogin = async () => {
     if (!loginUsername || !loginPassword) {
@@ -52,7 +54,7 @@ export default function LoginScreen() {
       setLoginUsername("");
       setLoginPassword("");
       // Navigate to home
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/akun");
     } else {
       Alert.alert("Login Gagal", error || "Username atau password salah");
       clearError();
@@ -85,11 +87,10 @@ export default function LoginScreen() {
       setRegisterPasswordConfirm("");
       setShowRegister(false);
       // Navigate to home
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/akun");
     } else {
       Alert.alert("Registrasi Gagal", error || "Gagal membuat akun");
       console.log("Error during registration:", error);
-      clearError();
     }
   };
 
@@ -169,7 +170,11 @@ export default function LoginScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={[S.button, loading ? S.disabledButton : null]}
+                  style={[
+                    S.button,
+                    loading ? S.disabledButton : null,
+                    { marginBottom: 24 },
+                  ]}
                   activeOpacity={0.85}
                   onPress={handleLogin}
                   disabled={loading}

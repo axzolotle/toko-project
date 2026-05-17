@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // ============================================================
 //  TYPES
@@ -271,73 +270,73 @@ const LaporanScreen: React.FC = () => {
       />
 
       <View style={S.screen}>
-        <SafeAreaView style={S.safeArea}>
-          {/* ── HEADER ── */}
-          <View style={S.header}>
-            <Text style={S.headerTitle}>Laporan</Text>
-            <TouchableOpacity
-              style={S.syncButton}
-              onPress={sync}
-              activeOpacity={0.8}
-              disabled={syncing}
-            >
-              <View style={S.syncDot} />
-              <Text style={S.syncText}>{syncing ? "Syncing..." : "Sync"}</Text>
-            </TouchableOpacity>
+        {/* <SafeAreaView style={S.safeArea}> */}
+        {/* ── HEADER ── */}
+        <View style={S.header}>
+          <Text style={S.headerTitle}>Laporan</Text>
+          <TouchableOpacity
+            style={S.syncButton}
+            onPress={sync}
+            activeOpacity={0.8}
+            disabled={syncing}
+          >
+            <View style={S.syncDot} />
+            <Text style={S.syncText}>{syncing ? "Syncing..." : "Sync"}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── DATE NAVIGATOR ── */}
+        <View style={S.dateNav}>
+          <TouchableOpacity
+            style={S.dateArrow}
+            onPress={prevHari}
+            activeOpacity={0.7}
+          >
+            <Text style={S.dateArrowText}>‹</Text>
+          </TouchableOpacity>
+
+          <View style={S.dateCenter}>
+            <Text style={S.dateTitleText}>{labelTanggal}</Text>
+            {hariIni && <Text style={S.dateSubText}>hari ini</Text>}
           </View>
 
-          {/* ── DATE NAVIGATOR ── */}
-          <View style={S.dateNav}>
-            <TouchableOpacity
-              style={S.dateArrow}
-              onPress={prevHari}
-              activeOpacity={0.7}
-            >
-              <Text style={S.dateArrowText}>‹</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={S.dateArrow}
+            onPress={nextHari}
+            activeOpacity={0.7}
+          >
+            <Text style={S.dateArrowText}>›</Text>
+          </TouchableOpacity>
+        </View>
 
-            <View style={S.dateCenter}>
-              <Text style={S.dateTitleText}>{labelTanggal}</Text>
-              {hariIni && <Text style={S.dateSubText}>hari ini</Text>}
-            </View>
-
-            <TouchableOpacity
-              style={S.dateArrow}
-              onPress={nextHari}
-              activeOpacity={0.7}
-            >
-              <Text style={S.dateArrowText}>›</Text>
-            </TouchableOpacity>
+        {/* ── CONTENT ── */}
+        {loading ? (
+          <View style={S.centered}>
+            <ActivityIndicator color={C.statValueGreen} size="large" />
           </View>
+        ) : !data || data.totalTransaksi === 0 ? (
+          <View style={S.centered}>
+            <Text style={S.emptyText}>
+              Tidak ada transaksi{"\n"}pada tanggal ini
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={S.scroll}
+            contentContainerStyle={S.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Stats */}
+            <StatsRow data={data} S={S} />
 
-          {/* ── CONTENT ── */}
-          {loading ? (
-            <View style={S.centered}>
-              <ActivityIndicator color={C.statValueGreen} size="large" />
-            </View>
-          ) : !data || data.totalTransaksi === 0 ? (
-            <View style={S.centered}>
-              <Text style={S.emptyText}>
-                Tidak ada transaksi{"\n"}pada tanggal ini
-              </Text>
-            </View>
-          ) : (
-            <ScrollView
-              style={S.scroll}
-              contentContainerStyle={S.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Stats */}
-              <StatsRow data={data} S={S} />
+            {/* Per Jenis */}
+            <PerJenisSection perJenis={data.perJenis} S={S} />
 
-              {/* Per Jenis */}
-              <PerJenisSection perJenis={data.perJenis} S={S} />
-
-              {/* Riwayat */}
-              <RiwayatSection riwayat={data.riwayat} S={S} />
-            </ScrollView>
-          )}
-        </SafeAreaView>
+            {/* Riwayat */}
+            <RiwayatSection riwayat={data.riwayat} S={S} />
+          </ScrollView>
+        )}
+        {/* </SafeAreaView> */}
       </View>
     </>
   );

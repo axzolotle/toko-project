@@ -4,10 +4,10 @@ import {
   createRekapHarian,
   createRekapKas,
   getTransaksiHarian,
-  HistoriGroup
+  HistoriGroup,
 } from "@/database/db2";
-import { useCurrentUser } from "@/service/useCurrentUser";
 import { useTheme } from "@/lib/ThemeContext";
+import { useCurrentUser } from "@/service/useCurrentUser";
 import {
   darkColors,
   darkStyles,
@@ -26,7 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // ============================================================
 //  TYPES
@@ -1068,50 +1067,47 @@ const KeuanganScreen: React.FC = () => {
         backgroundColor={C.headerBg}
       />
       <View style={S.screen}>
-        <SafeAreaView style={S.safeArea}>
-          {/* ── HEADER ── */}
-          <View style={S.header}>
-            <Text style={S.headerTitle}>Keuangan</Text>
-            <TouchableOpacity
-              style={S.catatButton}
-              activeOpacity={0.85}
-              onPress={() => openModal("rekap")}
-            >
-              <Text style={S.catatButtonText}>+ Catat</Text>
-            </TouchableOpacity>
-          </View>
+        {/* <SafeAreaView style={S.safeArea}> */}
+        {/* ── HEADER ── */}
+        <View style={S.header}>
+          <Text style={S.headerTitle}>Keuangan</Text>
+          <TouchableOpacity
+            style={S.catatButton}
+            activeOpacity={0.85}
+            onPress={() => openModal("rekap")}
+          >
+            <Text style={S.catatButtonText}>+ Catat</Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* ── INTERNAL TAB BAR ── */}
-          <View style={S.internalTabBar}>
-            {INTERNAL_TABS.map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
+        {/* ── INTERNAL TAB BAR ── */}
+        <View style={S.internalTabBar}>
+          {INTERNAL_TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[S.internalTabItem, isActive && S.internalTabItemActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.7}
+              >
+                <Text
                   style={[
-                    S.internalTabItem,
-                    isActive && S.internalTabItemActive,
+                    S.internalTabText,
+                    isActive && S.internalTabTextActive,
                   ]}
-                  onPress={() => setActiveTab(tab.key)}
-                  activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      S.internalTabText,
-                      isActive && S.internalTabTextActive,
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-          {/* ── TAB CONTENT ── */}
-          {activeTab === "rekap" && <TabRekapHarian S={S} C={C} />}
-          {activeTab === "histori" && <TabHistori S={S} C={C} />}
-        </SafeAreaView>
+        {/* ── TAB CONTENT ── */}
+        {activeTab === "rekap" && <TabRekapHarian S={S} C={C} />}
+        {activeTab === "histori" && <TabHistori S={S} C={C} />}
+        {/* </SafeAreaView> */}
       </View>
       <CatatRekapKas
         visible={showModal === "rekap"}

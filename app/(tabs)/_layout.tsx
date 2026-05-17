@@ -1,4 +1,3 @@
-import { darkColors, lightColors } from "@/styles/KasirStyles";
 import { useTheme } from "@/lib/ThemeContext";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
@@ -17,10 +16,8 @@ export default function TabLayout() {
           tabBarStyle: {
             height: Platform.OS === "ios" ? 80 : 62,
             paddingBottom: Platform.OS === "ios" ? 20 : 8,
-            paddingTop: 6,
             borderTopWidth: 0.5,
-            borderTopColor:
-              isDark ? colors.stepInactiveBorder : "#e2e8f0",
+            borderTopColor: isDark ? colors.stepInactiveBorder : "#e2e8f0",
             backgroundColor: colors.pageBg,
           },
           tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },

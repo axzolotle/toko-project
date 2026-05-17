@@ -1,26 +1,25 @@
 import {
-    catatTransaksi,
-    getItemByjenisandKategori,
-    getJenisItems,
-    getKategoriItems,
-    Item,
+  catatTransaksi,
+  getItemByjenisandKategori,
+  getJenisItems,
+  getKategoriItems,
+  Item,
 } from "@/database/db2";
+import { useTheme } from "@/lib/ThemeContext";
 import { createStok } from "@/service/Stok";
 import { useCurrentUser } from "@/service/useCurrentUser";
-import { useTheme } from "@/lib/ThemeContext";
 import { createStyles, darkColors, lightColors } from "@/styles/KasirStyles";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 type Step = 1 | 2 | 3;
 
@@ -328,27 +327,10 @@ export default function TransactionScreen() {
               </TouchableOpacity>
             ))
           ) : (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                paddingVertical: 60,
-              }}
-            >
-              <Text style={{ fontSize: 32, marginBottom: 12 }}>🔍</Text>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "600",
-                  color: C.productDesc,
-                }}
-              >
-                Tidak ada item
-              </Text>
-              <Text
-                style={{ fontSize: 12, color: C.productDesc, marginTop: 6 }}
-              >
+            <View style={S.emptyStateContainer}>
+              <Text style={S.emptyStateIcon}>🔍</Text>
+              <Text style={S.emptyStateTitle}>Tidak ada item</Text>
+              <Text style={S.emptyStateDesc}>
                 Pilih kategori untuk melihat item
               </Text>
             </View>
@@ -428,92 +410,35 @@ export default function TransactionScreen() {
           </View>
 
           {/* Quantity input */}
-          <View
-            style={{ paddingHorizontal: 20, marginTop: 20, marginBottom: 16 }}
-          >
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: "600",
-                color: C.confirmLabel,
-                marginBottom: 8,
-              }}
-            >
-              Jumlah
-            </Text>
+          <View style={S.quantityInputWrapper}>
+            <Text style={S.quantityLabel}>Jumlah</Text>
             <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: C.typeCardBorder,
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                fontSize: 14,
-                color: C.confirmName,
-                backgroundColor: C.typeCardBg,
-              }}
+              style={S.quantityInput}
               value={quantity}
               onChangeText={setQuantity}
               placeholder="Masukkan jumlah"
-              placeholderTextColor={C.productDesc}
               keyboardType="numeric"
               maxLength={4}
             />
           </View>
 
           {/* Total summary */}
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <View
-              style={{
-                backgroundColor: C.typeCardBg,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: C.typeCardBorder,
-                padding: 14,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ fontSize: 12, color: C.productDesc }}>
-                  Total Harga
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "700",
-                    color: C.confirmLaba,
-                  }}
-                >
+          <View style={S.totalSummaryWrapper}>
+            <View style={S.totalSummaryBox}>
+              <View style={S.totalSummaryRow}>
+                <Text style={S.totalSummaryLabel}>Total Harga</Text>
+                <Text style={S.totalSummaryValue}>
                   Rp {totalHarga.toLocaleString("id-ID")}
                 </Text>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text style={{ fontSize: 12, color: C.confirmLaba }}>
-                  Total Keuntungan
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "700",
-                    color: C.confirmLaba,
-                  }}
-                >
+              <View style={S.totalSummaryRowLast}>
+                <Text style={S.totalSummaryProfit}>Total Keuntungan</Text>
+                <Text style={S.totalSummaryProfitValue}>
                   + Rp {totalLaba.toLocaleString("id-ID")}
                 </Text>
               </View>
             </View>
-
-            <Text style={{ fontSize: 12, color: C.productDesc, marginTop: 12 }}>
+            <Text style={S.stockAvailableText}>
               Stok Tersedia: {selectedItem.quantity} unit
             </Text>
           </View>
@@ -548,11 +473,9 @@ export default function TransactionScreen() {
         backgroundColor={C.headerBg}
       />
       <View style={S.screen}>
-        <SafeAreaView style={S.safeArea}>
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-        </SafeAreaView>
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
       </View>
     </>
   );

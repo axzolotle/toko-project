@@ -5,8 +5,8 @@ import { StyleSheet } from "react-native";
 // ============================================================
 
 export const lightColors = {
-  pageBg: "#f2f7ed",
-  headerBg: "#ffffff",
+  pageBg: "#eef3e5",
+  headerBg: "#eef3e5",
   titleText: "#111b0f",
 
   // "+ Catat" button
@@ -14,7 +14,7 @@ export const lightColors = {
   catatBtnText: "#ffffff",
 
   // Internal tab bar (Master Kas / Rekap Harian / Histori)
-  tabBarBg: "#ffffff",
+  tabBarBg: "#eef3e5",
   tabBarBorder: "#e2ead8",
   tabActiveText: "#111b0f",
   tabActiveLine: "#2e5c27",

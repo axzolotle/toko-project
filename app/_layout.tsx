@@ -1,15 +1,25 @@
+import { ThemeProvider } from "@/lib/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { StatusBar } from "react-native";
-import { ensureDefaultUser, initDB } from "../database/db2";
-import { ThemeProvider } from "@/lib/ThemeContext";
+import {
+  ensureDefaultUser,
+  getAllItems,
+  getAllKas,
+  getAllRekapHarian,
+  getAllStok,
+  getAllTransaksi,
+  getAllUsers,
+  initDB
+} from "../database/db2";
 
 const CURRENT_USER_KEY = "@toko_current_user_id";
 
 export default function RootLayout() {
   // useSyncManager();
   // dropAllTables(); // HATI-HATI: Ini akan menghapus semua data di database, gunakan hanya untuk testing!
+  // seedDummyKonterData();
   useEffect(() => {
     initDatabase();
   }, []);
@@ -20,6 +30,21 @@ export default function RootLayout() {
 
       initDB();
       console.log("✅ Database initialized");
+
+      const users = getAllUsers();
+      console.log("User : ", users);
+      const items = getAllItems();
+      console.log("items : ", items);
+      const transaksi = getAllTransaksi();
+      console.log("Transaksi : ", transaksi);
+      const stok = getAllStok();
+      console.log("Stok : ", stok);
+      const kas = getAllKas();
+      console.log("Kas : ", kas);
+      const rekapHarian = getAllRekapHarian();
+      console.log("rekap harian : ", rekapHarian);
+
+      // console.log(db.getAllSync("SELECT * FROM kas LIMIT 1"));
 
       // 2. Ensure default user exists
       const defaultUserId = ensureDefaultUser();

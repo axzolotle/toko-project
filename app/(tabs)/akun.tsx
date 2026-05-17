@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 // ============================================================
 //  TYPES
@@ -335,197 +334,195 @@ const AkunScreen: React.FC = () => {
         backgroundColor={C.headerBg}
       />
       <View style={S.screen}>
-        <SafeAreaView style={S.safeArea}>
-          {/* ── HEADER ── */}
-          <View style={S.header}>
-            <Text style={S.headerTitle}>Akun</Text>
+        {/* <SafeAreaView style={S.safeArea}> */}
+        {/* ── HEADER ── */}
+        <View style={S.header}>
+          <Text style={S.headerTitle}>Akun</Text>
+        </View>
+
+        <ScrollView
+          style={S.scroll}
+          contentContainerStyle={S.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── PROFILE CARD ── */}
+          <View style={S.profileCard}>
+            <View style={S.avatarCircle}>
+              <Text style={S.avatarText}>{user.avatarInisial}</Text>
+            </View>
+            <View style={S.profileInfo}>
+              <Text style={S.profileName}>{user.nama}</Text>
+              <Text style={S.profileUsername}>{user.username}</Text>
+            </View>
+            <View style={S.roleBadge}>
+              <Text style={S.roleBadgeText}>{getLabelRole(user.role)}</Text>
+            </View>
           </View>
 
-          <ScrollView
-            style={S.scroll}
-            contentContainerStyle={S.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* ── PROFILE CARD ── */}
-            <View style={S.profileCard}>
-              <View style={S.avatarCircle}>
-                <Text style={S.avatarText}>{user.avatarInisial}</Text>
-              </View>
-              <View style={S.profileInfo}>
-                <Text style={S.profileName}>{user.nama}</Text>
-                <Text style={S.profileUsername}>{user.username}</Text>
-              </View>
-              <View style={S.roleBadge}>
-                <Text style={S.roleBadgeText}>{getLabelRole(user.role)}</Text>
-              </View>
-            </View>
-
-            {/* ── SECTION: TAMPILAN ── */}
-            <Text style={S.sectionLabel}>Tampilan</Text>
-            <View style={S.groupCard}>
-              <SettingRow
-                emoji="🌙"
-                title="Mode Malam"
-                desc="tampilan gelap"
-                isLast
-                S={S}
-                right={
-                  <AppToggle
-                    value={settings.modeMalam}
-                    onToggle={toggleModeMalam}
-                    S={S}
-                  />
-                }
-              />
-            </View>
-
-            {/* ── SECTION: DATA & SINKRONISASI ── */}
-            <Text style={S.sectionLabel}>Data &amp; Sinkronisasi</Text>
-            <View style={S.groupCard}>
-              {/* Terhubung ke internet */}
-              <View style={S.row}>
-                <View
-                  style={[
-                    S.statusDot,
-                    {
-                      backgroundColor: settings.terhubungInternet
-                        ? C.dotOnline
-                        : C.dotOffline,
-                    },
-                  ]}
+          {/* ── SECTION: TAMPILAN ── */}
+          <Text style={S.sectionLabel}>Tampilan</Text>
+          <View style={S.groupCard}>
+            <SettingRow
+              emoji="🌙"
+              title="Mode Malam"
+              desc="tampilan gelap"
+              isLast
+              S={S}
+              right={
+                <AppToggle
+                  value={settings.modeMalam}
+                  onToggle={toggleModeMalam}
+                  S={S}
                 />
-                <View style={S.rowTextBlock}>
-                  <Text style={S.rowTitle}>
-                    {settings.terhubungInternet
-                      ? "Terhubung ke internet"
-                      : "Tidak ada koneksi"}
-                  </Text>
-                  <Text style={S.rowDesc}>
-                    {settings.terhubungInternet
-                      ? "data siap disinkronkan"
-                      : "periksa jaringan"}
-                  </Text>
-                </View>
-              </View>
+              }
+            />
+          </View>
 
-              {/* Sinkronisasi Sekarang */}
-              <SettingRow
-                emoji="☁️"
-                title="Sinkronisasi Sekarang"
-                desc={
-                  syncing
-                    ? "sedang upload..."
-                    : settings.statusSync === "siap"
-                      ? `Terakhir sync: ${settings.terakhirSync}`
-                      : "upload data offline"
-                }
-                isLast
-                S={S}
-                onPress={syncSekarang}
-                right={
-                  settings.statusSync !== "error" ? <SiapBadge S={S} /> : null
-                }
+          {/* ── SECTION: DATA & SINKRONISASI ── */}
+          <Text style={S.sectionLabel}>Data &amp; Sinkronisasi</Text>
+          <View style={S.groupCard}>
+            {/* Terhubung ke internet */}
+            <View style={S.row}>
+              <View
+                style={[
+                  S.statusDot,
+                  {
+                    backgroundColor: settings.terhubungInternet
+                      ? C.dotOnline
+                      : C.dotOffline,
+                  },
+                ]}
               />
-            </View>
-
-            {/* ── SECTION: RIWAYAT & LAPORAN ── */}
-            <Text style={S.sectionLabel}>Riwayat &amp; Laporan</Text>
-            <View style={S.groupCard}>
-              <SettingRow
-                emoji="📋"
-                title="Riwayat Stok"
-                desc="masuk dan keluar stok"
-                S={S}
-                onPress={() => console.log("Riwayat Stok")}
-                right={<Text style={S.rowArrow}>›</Text>}
-              />
-              <SettingRow
-                emoji="📈"
-                title="Laporan Mingguan"
-                desc="rekap 7 hari terakhir"
-                S={S}
-                right={<SoonBadge S={S} />}
-              />
-              <SettingRow
-                emoji="💾"
-                title="Export Data"
-                desc="ekspor ke CSV"
-                isLast
-                S={S}
-                right={<SoonBadge S={S} />}
-              />
-            </View>
-
-            {/* ── SECTION: MANAJEMEN (admin only) ── */}
-            {isAdmin && (
-              <>
-                <Text style={S.sectionLabel}>Manajemen</Text>
-                <View style={S.groupCard}>
-                  <SettingRow
-                    emoji="👥"
-                    title="Kelola Pengguna"
-                    desc="tambah, edit, hapus operator"
-                    S={S}
-                    onPress={() => console.log("Kelola Pengguna")}
-                    right={<Text style={S.rowArrow}>›</Text>}
-                  />
-                  <SettingRow
-                    emoji="⚙️"
-                    title="Pengaturan Toko"
-                    desc="nama toko, alamat"
-                    isLast
-                    S={S}
-                    right={<SoonBadge S={S} />}
-                  />
-                </View>
-              </>
-            )}
-
-            {/* ── SECTION: TENTANG ── */}
-            <Text style={S.sectionLabel}>Tentang</Text>
-            <View style={S.groupCard}>
-              <SettingRow
-                emoji="ℹ️"
-                title="Tentang Aplikasi"
-                desc="Konter v1.0.0"
-                S={S}
-                onPress={() => console.log("Tentang Aplikasi")}
-                right={<Text style={S.rowArrow}>›</Text>}
-              />
-              <SettingRow
-                emoji="🔒"
-                title="Privasi &amp; Keamanan"
-                desc="data tersimpan lokal"
-                isLast
-                S={S}
-                onPress={() => console.log("Privasi")}
-                right={<Text style={S.rowArrow}>›</Text>}
-              />
-            </View>
-
-            {/* ── KELUAR ── */}
-            <TouchableOpacity
-              style={S.keluarCard}
-              onPress={keluar}
-              activeOpacity={0.8}
-            >
-              <View style={S.keluarIconBox}>
-                <Text style={{ fontSize: 18 }}>📕</Text>
-              </View>
-              <View>
-                <Text style={S.keluarTitle}>Keluar</Text>
-                <Text style={S.keluarDesc}>
-                  keluar dari akun {user.username}
+              <View style={S.rowTextBlock}>
+                <Text style={S.rowTitle}>
+                  {settings.terhubungInternet
+                    ? "Terhubung ke internet"
+                    : "Tidak ada koneksi"}
+                </Text>
+                <Text style={S.rowDesc}>
+                  {settings.terhubungInternet
+                    ? "data siap disinkronkan"
+                    : "periksa jaringan"}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </View>
 
-            {/* ── FOOTER ── */}
-            <Text style={S.footerText}>
-              Konter v1.0.0 · {getLabelFooter(user.role)}
-            </Text>
-          </ScrollView>
-        </SafeAreaView>
+            {/* Sinkronisasi Sekarang */}
+            <SettingRow
+              emoji="☁️"
+              title="Sinkronisasi Sekarang"
+              desc={
+                syncing
+                  ? "sedang upload..."
+                  : settings.statusSync === "siap"
+                    ? `Terakhir sync: ${settings.terakhirSync}`
+                    : "upload data offline"
+              }
+              isLast
+              S={S}
+              onPress={syncSekarang}
+              right={
+                settings.statusSync !== "error" ? <SiapBadge S={S} /> : null
+              }
+            />
+          </View>
+
+          {/* ── SECTION: RIWAYAT & LAPORAN ── */}
+          <Text style={S.sectionLabel}>Riwayat &amp; Laporan</Text>
+          <View style={S.groupCard}>
+            <SettingRow
+              emoji="📋"
+              title="Riwayat Stok"
+              desc="masuk dan keluar stok"
+              S={S}
+              onPress={() => console.log("Riwayat Stok")}
+              right={<Text style={S.rowArrow}>›</Text>}
+            />
+            <SettingRow
+              emoji="📈"
+              title="Laporan Mingguan"
+              desc="rekap 7 hari terakhir"
+              S={S}
+              right={<SoonBadge S={S} />}
+            />
+            <SettingRow
+              emoji="💾"
+              title="Export Data"
+              desc="ekspor ke CSV"
+              isLast
+              S={S}
+              right={<SoonBadge S={S} />}
+            />
+          </View>
+
+          {/* ── SECTION: MANAJEMEN (admin only) ── */}
+          {isAdmin && (
+            <>
+              <Text style={S.sectionLabel}>Manajemen</Text>
+              <View style={S.groupCard}>
+                <SettingRow
+                  emoji="👥"
+                  title="Kelola Pengguna"
+                  desc="tambah, edit, hapus operator"
+                  S={S}
+                  onPress={() => console.log("Kelola Pengguna")}
+                  right={<Text style={S.rowArrow}>›</Text>}
+                />
+                <SettingRow
+                  emoji="⚙️"
+                  title="Pengaturan Toko"
+                  desc="nama toko, alamat"
+                  isLast
+                  S={S}
+                  right={<SoonBadge S={S} />}
+                />
+              </View>
+            </>
+          )}
+
+          {/* ── SECTION: TENTANG ── */}
+          <Text style={S.sectionLabel}>Tentang</Text>
+          <View style={S.groupCard}>
+            <SettingRow
+              emoji="ℹ️"
+              title="Tentang Aplikasi"
+              desc="Konter v1.0.0"
+              S={S}
+              onPress={() => console.log("Tentang Aplikasi")}
+              right={<Text style={S.rowArrow}>›</Text>}
+            />
+            <SettingRow
+              emoji="🔒"
+              title="Privasi &amp; Keamanan"
+              desc="data tersimpan lokal"
+              isLast
+              S={S}
+              onPress={() => console.log("Privasi")}
+              right={<Text style={S.rowArrow}>›</Text>}
+            />
+          </View>
+
+          {/* ── KELUAR ── */}
+          <TouchableOpacity
+            style={S.keluarCard}
+            onPress={keluar}
+            activeOpacity={0.8}
+          >
+            <View style={S.keluarIconBox}>
+              <Text style={{ fontSize: 18 }}>📕</Text>
+            </View>
+            <View>
+              <Text style={S.keluarTitle}>Keluar</Text>
+              <Text style={S.keluarDesc}>keluar dari akun {user.username}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* ── FOOTER ── */}
+          <Text style={S.footerText}>
+            Konter v1.0.0 · {getLabelFooter(user.role)}
+          </Text>
+        </ScrollView>
+        {/* </SafeAreaView> */}
       </View>
     </>
   );

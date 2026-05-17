@@ -181,10 +181,8 @@ export async function syncItems() {
 
 // ============ SYNC TRANSAKSI ============
 export async function syncTransaksi() {
-  console.log("📤 [SYNC] Starting sync TRANSAKSI...");
-
   try {
-    // 🔥 1. Query benar (JOIN 2 tabel)
+    // 1. Query benar (JOIN 2 tabel)
     const unSyncedTransaksi = db.getAllSync<any>(
       `SELECT 
          t.*, 
@@ -195,49 +193,26 @@ export async function syncTransaksi() {
        LEFT JOIN items i ON t.item_id = i.id
        WHERE t.synced = 0`,
     );
-
-    if (unSyncedTransaksi.length === 0) {
-      console.log("✅ [TRANSAKSI] No data to sync");
-      return { success: true, synced: 0, table: "transaksi" };
-    }
-
-    console.log(`📝 Found ${unSyncedTransaksi.length} transaksi`);
-
     const dataToSync = [];
-
     for (const t of unSyncedTransaksi) {
-      // 🔥 2. Skip kalau FK belum siap
-      if (!t.operator_uuid || !t.item_uuid) {
-        console.warn("⚠️ Missing FK UUID → skip transaksi:", t.id);
-        continue;
-      }
-
-      // 🔥 3. Handle UUID transaksi
+      // 2. Handle UUID transaksi
       let trxUUID = t.uuid;
-
       if (!trxUUID) {
         trxUUID = uuid.v4();
-
         db.runSync("UPDATE transaksi SET uuid = ? WHERE id = ?", [
           trxUUID,
           t.id,
         ]);
-
-        console.log(`🆕 UUID transaksi ${t.id}: ${trxUUID}`);
       }
 
       dataToSync.push({
         uuid: trxUUID,
-
-        // 🔥 FK sekarang UUID
         item_id: t.item_uuid,
         operator_id: t.operator_uuid,
-
         item_nama: t.item_nama,
         item_jenis: t.item_jenis,
         item_kategori: t.item_kategori,
         item_detail: t.item_detail,
-
         harga_jual: t.harga_jual,
         harga_modal: t.harga_modal,
         quantity: t.quantity,
@@ -246,15 +221,7 @@ export async function syncTransaksi() {
         tanggal: t.tanggal,
       });
     }
-
-    if (dataToSync.length === 0) {
-      console.warn("⚠️ No valid transaksi to sync");
-      return { success: false, table: "transaksi" };
-    }
-
-    console.log("📤 Uploading transaksi:", dataToSync);
-
-    // 🔥 4. Upsert langsung (tanpa mapping)
+    //  3. Upsert langsung (tanpa mapping)
     const { data, error } = await supabase
       .from("transaksi")
       .upsert(dataToSync, { onConflict: "uuid" })
@@ -263,23 +230,17 @@ export async function syncTransaksi() {
     if (error) {
       throw new Error(`Supabase error: ${error.message}`);
     }
-
-    console.log("✅ [TRANSAKSI] Synced:", data);
-
-    // 🔥 5. Mark synced
+    // 4. Mark synced
     unSyncedTransaksi.forEach((t) => {
       db.runSync("UPDATE transaksi SET synced = 1 WHERE id = ?", [t.id]);
     });
-
-    console.log(`✅ [TRANSAKSI] Synced ${dataToSync.length} records`);
-
     return {
       success: true,
       synced: dataToSync.length,
       table: "transaksi",
     };
   } catch (error) {
-    console.error("❌ [TRANSAKSI] Sync error:", error);
+    console.error("[TRANSAKSI] Sync error:", error);
     return { success: false, error, table: "transaksi" };
   }
 }
@@ -447,12 +408,11 @@ export async function syncAllTables() {
     timestamp: new Date().toISOString(),
   };
 
-  const totalSynced =
-    (results.users.synced ?? 0) +
-    (results.items.synced ?? 0) +
-    (results.transaksi.synced ?? 0) +
-    (results.kas.synced ?? 0) +
-    (results.stok.synced ?? 0);
+  const totalSynced = results.users.synced ?? 0;
+  // (results.items.synced ?? 0) +
+  // (results.transaksi.synced ?? 0) +
+  // (results.kas.synced ?? 0) +
+  // (results.stok.synced ?? 0);
 
   console.log("\n✅ ===== FULL SYNC COMPLETED =====");
   console.log("Total synced:", totalSynced);

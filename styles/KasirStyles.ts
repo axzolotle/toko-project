@@ -560,6 +560,115 @@ export const createStyles = (c: typeof lightColors) =>
       fontWeight: "600",
       color: c.btnSecondaryText,
     },
+
+    // ── EMPTY STATE ─────────────────────────────────────
+    emptyStateContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 60,
+    },
+    emptyStateIcon: {
+      fontSize: 32,
+      marginBottom: 12,
+    },
+    emptyStateTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: c.productDesc,
+    },
+    emptyStateDesc: {
+      fontSize: 12,
+      color: c.productDesc,
+      marginTop: 6,
+    },
+
+    // ── INFO BOX (Step 3) ───────────────────────────────
+    infoBox: {
+      borderLeftWidth: 4,
+      borderRadius: 8,
+      padding: 14,
+      marginBottom: 16,
+    },
+    infoBoxLabel: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: c.productDesc,
+      marginBottom: 4,
+    },
+    infoBoxValue: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: c.productName,
+    },
+
+    // ── QUANTITY INPUT (Step 3) ────────────────────────
+    quantityInputWrapper: {
+      paddingHorizontal: 20,
+      marginTop: 20,
+      marginBottom: 16,
+    },
+    quantityLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: c.confirmLabel,
+      marginBottom: 8,
+    },
+    quantityInput: {
+      borderWidth: 1,
+      borderColor: c.typeCardBorder,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: c.confirmName,
+      backgroundColor: c.typeCardBg,
+    },
+
+    // ── TOTAL SUMMARY BOX (Step 3) ──────────────────────
+    totalSummaryWrapper: {
+      paddingHorizontal: 20,
+      marginBottom: 20,
+    },
+    totalSummaryBox: {
+      backgroundColor: c.typeCardBg,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.typeCardBorder,
+      padding: 14,
+    },
+    totalSummaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    totalSummaryRowLast: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    totalSummaryLabel: {
+      fontSize: 12,
+      color: c.productDesc,
+    },
+    totalSummaryValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: c.confirmLaba,
+    },
+    totalSummaryProfit: {
+      fontSize: 12,
+      color: c.confirmLaba,
+    },
+    totalSummaryProfitValue: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: c.confirmLaba,
+    },
+    stockAvailableText: {
+      fontSize: 12,
+      color: c.productDesc,
+      marginTop: 12,
+    },
   });
 
 // Pre-built exports

@@ -1,10 +1,10 @@
+import { useTheme } from "@/lib/ThemeContext";
 import {
   darkColors,
   darkStyles,
   lightColors,
   lightStyles,
 } from "@/styles/ItemListStyles";
-import { useTheme } from "@/lib/ThemeContext";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -18,17 +18,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   createItem,
-  createKasForItem,
   getAllItems,
   getJenisItems,
   getKategoriItems,
-  Item,
+  Item
 } from "../../database/db2";
 import { createStok } from "../../service/Stok";
 import { useCurrentUser } from "../../service/useCurrentUser";
@@ -83,20 +80,16 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, S, onStockPress }) => {
         </Text>
 
         {/* Stock info */}
-        {isLowStock ? (
-          <View style={S.stockWarningRow}>
-            <Text style={S.stockWarningText}>⚠ stok {item.quantity}</Text>
-          </View>
-        ) : (
-          <Text style={S.stockNormalText}>stok {item.quantity}</Text>
-        )}
-
         <TouchableOpacity
           style={S.stockButton}
           activeOpacity={0.7}
           onPress={() => onStockPress(item.id, item.nama)}
         >
-          <Text style={S.stockButtonText}>Stok</Text>
+          {isLowStock ? (
+            <Text style={S.stockButtonWarningText}>⚠ stok {item.quantity}</Text>
+          ) : (
+            <Text style={S.stockButtonText}>stok {item.quantity}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -184,8 +177,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         userId,
       );
 
-      createKasForItem(itemId, nama.trim(), userId);
-
       Alert.alert("Sukses", `Item "${nama}" berhasil ditambahkan`);
       console.log("Item created with ID:", itemId);
       console.log({
@@ -197,7 +188,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         harga_jual: jualNum,
         user_id: userId,
       });
-
       // Reset form
       handleCancel();
       onSuccess();
@@ -222,7 +212,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   if (!visible) return null;
 
   return (
-    <SafeAreaView style={S.safeArea}>
+    // <SafeAreaView style={S.safeArea}>
+    <>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={C.headerBg}
@@ -285,7 +276,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                       : S.chipTextInactive
                   }
                 >
-                  + Lainnya
+                  + Baru
                 </Text>
               </TouchableOpacity>
             </View>
@@ -303,7 +294,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           </>
           {/* Kategori */}
           <Text style={S.fieldLabel}>Kategori</Text>
-          {kategoriList.length > 0 ? (
+
+          {jenisAkhir ? (
             <>
               <View style={S.chipRow}>
                 {kategoriList.map((kat) => (
@@ -324,6 +316,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                     </Text>
                   </TouchableOpacity>
                 ))}
+
                 <TouchableOpacity
                   style={[
                     S.chipBase,
@@ -338,10 +331,17 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                         : S.chipTextInactive
                     }
                   >
-                    + Tambah
+                    + Baru
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              {kategoriList.length === 0 && kategori !== "__custom__" && (
+                <Text style={S.helperText}>
+                  Belum ada kategori untuk jenis ini. Tambahkan kategori baru.
+                </Text>
+              )}
+
               {kategori === "__custom__" && (
                 <TextInput
                   style={S.inputBase}
@@ -355,7 +355,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             </>
           ) : (
             <Text style={S.helperText}>
-              Pilih jenis terlebih dahulu untuk melihat kategori
+              Pilih atau buat jenis terlebih dahulu
             </Text>
           )}
           {/* Detail */}
@@ -438,7 +438,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      {/* </SafeAreaView> */}
+    </>
   );
 };
 
@@ -675,135 +676,142 @@ export default function BarangScreen() {
     );
   }
 
+  // ============================================================
+  // ── STRUCTURE YANG LEBIH STABIL
+  // ============================================================
+
   return (
     <>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={C.headerBg}
       />
+
       <View style={S.screen}>
-        <SafeAreaView style={S.safeArea}>
-          {/* ── HEADER ── */}
-          <View style={S.header}>
-            <Text style={S.headerTitle}>Item</Text>
-            <TouchableOpacity
-              style={S.addButton}
-              activeOpacity={0.8}
-              onPress={() => setShowModal("item")}
-            >
-              <Text style={S.addButtonPlus}>+</Text>
-              <Text style={S.addButtonText}>Tambah</Text>
-            </TouchableOpacity>
-          </View>
+        {/* <SafeAreaView style={S.safeArea}> */}
+        {/* ── HEADER ───────────────────────────── */}
+        <View style={S.header}>
+          <Text style={S.headerTitle}>Item</Text>
 
-          {/* ── SEARCH ── */}
-          <View style={S.searchWrapper}>
-            <View style={S.searchBar}>
-              <Text style={{ fontSize: 16 }}>🔍</Text>
-              <TextInput
-                style={S.searchInput}
-                placeholder="cari nama, kategori..."
-                placeholderTextColor={C.searchPlaceholder}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          </View>
-
-          {/* ── FILTER CHIPS ── */}
-          <ScrollView
-            style={S.filterWrapper}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
+          <TouchableOpacity
+            style={S.addButton}
+            activeOpacity={0.8}
+            onPress={() => setShowModal("item")}
           >
-            <View style={S.filterRow}>
-              {/* "Semua" chip */}
-              <TouchableOpacity
+            <Text style={S.addButtonPlus}>+</Text>
+            <Text style={S.addButtonText}>Tambah</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── SEARCH ───────────────────────────── */}
+        <View style={S.searchWrapper}>
+          <View style={S.searchBar}>
+            <Text style={{ fontSize: 16 }}>🔍</Text>
+
+            <TextInput
+              style={S.searchInput}
+              placeholder="cari nama, kategori..."
+              placeholderTextColor={C.searchPlaceholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        </View>
+
+        {/* ── FILTER ───────────────────────────── */}
+        <View style={S.filterContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={S.filterRow}
+          >
+            <TouchableOpacity
+              style={[
+                S.chipBase,
+                selectedFilter === "all"
+                  ? S.chipFilterActive
+                  : S.chipFilterInactive,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setSelectedFilter("all")}
+            >
+              <Text
                 style={
-                  (S.chipBase,
                   selectedFilter === "all"
-                    ? S.chipFilterActive
-                    : S.chipFilterInactive)
+                    ? S.chipTextActive
+                    : S.chipTextInactive
                 }
+              >
+                Semua
+              </Text>
+            </TouchableOpacity>
+
+            {jenisList.map((jenis) => (
+              <TouchableOpacity
+                key={jenis}
+                style={[
+                  S.chipBase,
+                  selectedFilter === jenis
+                    ? S.chipFilterActive
+                    : S.chipFilterInactive,
+                ]}
                 activeOpacity={0.8}
-                onPress={() => setSelectedFilter("all")}
+                onPress={() => setSelectedFilter(jenis)}
               >
                 <Text
                   style={
-                    selectedFilter === "all"
+                    selectedFilter === jenis
                       ? S.chipTextActive
                       : S.chipTextInactive
                   }
                 >
-                  Semua
+                  {jenis}
                 </Text>
               </TouchableOpacity>
-              {/* Jenis chips */}
-              {jenisList.map((jenis) => (
-                <TouchableOpacity
-                  key={jenis}
-                  style={
-                    selectedFilter === jenis
-                      ? S.chipFilterActive
-                      : S.chipFilterInactive
-                  }
-                  activeOpacity={0.7}
-                  onPress={() => setSelectedFilter(jenis)}
-                >
-                  <Text
-                    style={
-                      selectedFilter === jenis
-                        ? S.chipTextActive
-                        : S.chipTextInactive
-                    }
-                  >
-                    {jenis}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            ))}
           </ScrollView>
+        </View>
 
-          {/* ── META COUNT ── */}
-          <View style={S.metaWrapper}>
-            <Text style={S.metaText}>
-              {filteredItems.length} item
-              {searchQuery && ` (hasil pencarian)`}
+        {/* ── META ───────────────────────────── */}
+        <View style={S.metaWrapper}>
+          <Text style={S.metaText}>
+            {filteredItems.length} item
+            {searchQuery ? " (hasil pencarian)" : ""}
+          </Text>
+        </View>
+
+        {/* ── LIST ───────────────────────────── */}
+        {filteredItems.length === 0 ? (
+          <View style={S.emptyState}>
+            <Text style={S.emptyTitle}>
+              {searchQuery || selectedFilter !== "all"
+                ? "Tidak ada item"
+                : "Belum ada item"}
+            </Text>
+
+            <Text style={S.emptyDesc}>
+              {searchQuery || selectedFilter !== "all"
+                ? "Coba ubah pencarian atau filter"
+                : "Klik tombol + Tambah untuk memulai"}
             </Text>
           </View>
-
-          {/* ── LIST CONTAINER ── */}
-          <View style={{ justifyContent: "flex-start" }}>
-            {/* ── LIST ── */}
-            {filteredItems.length === 0 ? (
-              <View style={S.emptyState}>
-                <Text style={S.emptyTitle}>
-                  {searchQuery || selectedFilter !== "all"
-                    ? "Tidak ada item"
-                    : "Belum ada item"}
-                </Text>
-                <Text style={S.emptyDesc}>
-                  {searchQuery || selectedFilter !== "all"
-                    ? "Coba ubah pencarian atau filter"
-                    : "Klik tombol + Tambah untuk memulai"}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredItems}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={S.listContent}
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <ItemCard item={item} S={S} onStockPress={openStockModal} />
-                )}
-              />
+        ) : (
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <ItemCard item={item} S={S} onStockPress={openStockModal} />
             )}
-          </View>
-        </SafeAreaView>
+            style={S.list}
+            contentContainerStyle={S.listContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
+        )}
+        {/* </SafeAreaView> */}
       </View>
 
-      {/* ── STOCK MODAL ── */}
+      {/* ── MODAL ───────────────────────────── */}
       <StockModal
         visible={showModal === "stock"}
         itemId={editingItemId}

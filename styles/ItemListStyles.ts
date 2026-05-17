@@ -128,6 +128,7 @@ export const createStyles = (c: typeof lightColors) =>
     screen: {
       flex: 1,
       backgroundColor: c.pageBg,
+      // backgroundColor: c.badgeTransferText,
     },
     safeArea: {
       flex: 1,
@@ -415,105 +416,117 @@ export const createStyles = (c: typeof lightColors) =>
 
     //? ITEM CARD — LIST ITEM
     card: {
-      backgroundColor: c.cardBg,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      padding: 14,
       flexDirection: "row",
       justifyContent: "space-between",
+
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+
+      marginBottom: 12,
+
       shadowColor: c.cardShadowColor,
-      shadowOffset: { width: 0, height: 1 },
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
       shadowOpacity: 0.06,
       shadowRadius: 4,
       elevation: 1,
     },
+
     cardLeft: {
       flex: 1,
-      marginRight: 10,
-      gap: 2,
+      paddingRight: 12,
     },
+
     cardRight: {
+      width: 130,
       alignItems: "flex-end",
       justifyContent: "flex-start",
-      gap: 3,
     },
+
     cardTitle: {
       fontSize: 17,
       fontWeight: "700",
       color: c.cardTitleText,
-      letterSpacing: -0.3,
-      marginTop: 2,
+      marginBottom: 4,
     },
+
     cardSub: {
       fontSize: 12,
       color: c.cardSubText,
-      fontWeight: "400",
+      marginBottom: 2,
     },
+
     cardDesc: {
       fontSize: 12,
       color: c.cardDescText,
-      fontWeight: "400",
-      marginTop: 1,
+      marginTop: 2,
     },
 
     priceRow: {
       flexDirection: "row",
-      alignItems: "flex-start",
+      alignItems: "center",
     },
+
     priceText: {
       fontSize: 18,
       fontWeight: "700",
       color: c.priceText,
-      letterSpacing: -0.3,
     },
+
     priceDot: {
-      width: 7,
-      height: 7,
-      borderRadius: 4,
+      width: 8,
+      height: 8,
+      borderRadius: 999,
       backgroundColor: c.priceDot,
-      marginLeft: 3,
-      marginTop: 4,
+      marginLeft: 5,
     },
+
     modalText: {
       fontSize: 12,
       color: c.modalText,
-      fontWeight: "400",
+      marginTop: 4,
     },
+
     profitText: {
       fontSize: 12,
-      fontWeight: "600",
+      fontWeight: "700",
       color: c.profitText,
-    },
-    stockWarningRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 3,
       marginTop: 2,
     },
-    stockWarningText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: c.stockWarningText,
-    },
+
     stockNormalText: {
       fontSize: 12,
-      fontWeight: "500",
       color: c.stockNormalText,
-      marginTop: 2,
+      marginTop: 8,
     },
+
     stockButton: {
-      marginTop: 5,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 14,
+      marginTop: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 999,
       borderWidth: 1,
       borderColor: c.stockBtnBorder,
       backgroundColor: c.stockBtnBg,
     },
+
+    stockWarningText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: c.stockWarningText,
+    },
+
     stockButtonText: {
-      fontSize: 11,
-      fontWeight: "500",
+      fontSize: 12,
+      fontWeight: "600",
       color: c.stockBtnText,
     },
 
@@ -541,10 +554,9 @@ export const createStyles = (c: typeof lightColors) =>
       color: c.searchText,
       padding: 0,
     },
-    filterWrapper: {
+    filterContainer: {
       paddingHorizontal: 18,
-      paddingBottom: 15,
-      height: 36,
+      paddingBottom: 14,
       backgroundColor: c.headerBg,
     },
     filterRow: {
@@ -554,27 +566,21 @@ export const createStyles = (c: typeof lightColors) =>
       height: 36,
     },
     metaWrapper: {
-      paddingHorizontal: 18,
-      paddingTop: 8,
+      paddingHorizontal: 20,
       paddingBottom: 10,
-      backgroundColor: c.headerBg,
     },
     metaText: {
       fontSize: 13,
       fontWeight: "400",
       color: c.metaText,
     },
+    list: {
+      flex: 1,
+    },
     listContent: {
       paddingHorizontal: 18,
-      justifyContent: "flex-start",
-      paddingTop: 2,
-      paddingBottom: 8,
-      gap: 10,
-    },
-    emptyState: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
+      paddingTop: 4,
+      paddingBottom: 24,
     },
     emptyTitle: {
       fontSize: 16,
@@ -585,6 +591,14 @@ export const createStyles = (c: typeof lightColors) =>
       fontSize: 12,
       color: c.cardDescText,
       marginTop: 4,
+    },
+
+    // EMPTY
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 30,
     },
 
     // Category badge color pairs (bg + text combined per category)
