@@ -1,12 +1,12 @@
 import { darkColors, lightColors } from "@/styles/KasirStyles";
+import { useTheme } from "@/lib/ThemeContext";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
-import { Platform, useColorScheme } from "react-native";
+import { Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const colors = colorScheme === "dark" ? darkColors : lightColors;
+  const { isDark, colors } = useTheme();
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -20,7 +20,7 @@ export default function TabLayout() {
             paddingTop: 6,
             borderTopWidth: 0.5,
             borderTopColor:
-              colorScheme === "dark" ? colors.stepInactiveBorder : "#e2e8f0",
+              isDark ? colors.stepInactiveBorder : "#e2e8f0",
             backgroundColor: colors.pageBg,
           },
           tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
@@ -28,12 +28,12 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="home"
+          name="transaction"
           options={{
-            title: "Home",
+            title: "Transaksi",
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
-                name={focused ? "home" : "home-outline"}
+                name={focused ? "cash" : "cash-outline"}
                 size={22}
                 color={color}
               />
@@ -54,9 +54,9 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="transaction"
+          name="kas"
           options={{
-            title: "Transaksi",
+            title: "Kas",
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
                 name={focused ? "cash" : "cash-outline"}
@@ -80,12 +80,12 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="test"
+          name="akun"
           options={{
-            title: "Testing",
+            title: "Akun",
             tabBarIcon: ({ color, focused }) => (
               <Ionicons
-                name={focused ? "analytics" : "analytics-outline"}
+                name={focused ? "person" : "person-outline"}
                 size={22}
                 color={color}
               />

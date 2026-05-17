@@ -4,6 +4,7 @@ import {
   lightColors,
   lightStyles,
 } from "@/styles/ItemListStyles";
+import { useTheme } from "@/lib/ThemeContext";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -17,11 +18,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
+
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   createItem,
   createKasForItem,
@@ -37,38 +37,6 @@ import { useCurrentUser } from "../../service/useCurrentUser";
 // TYPES
 // ============================================================
 type ModalType = null | "item" | "stock";
-type CategoryType = "makanan" | "minuman" | "snack" | "rokok" | "sembako";
-
-// ============================================================
-// CONSTANTS
-// ============================================================
-const JENIS_PRESET = ["Makanan", "Minuman", "Snack", "Rokok", "Sembako"];
-
-const jenisToCategory = (jenis: string): CategoryType => {
-  const lower = jenis.toLowerCase();
-  if (lower.includes("makanan")) return "makanan";
-  if (lower.includes("minuman")) return "minuman";
-  if (lower.includes("snack")) return "snack";
-  if (lower.includes("rokok")) return "rokok";
-  if (lower.includes("sembako")) return "sembako";
-  return "makanan";
-};
-
-const categoryEmojis: Record<CategoryType, string> = {
-  makanan: "🍜",
-  minuman: "🥤",
-  snack: "🍪",
-  rokok: "🚬",
-  sembako: "🛒",
-};
-
-const categoryLabels: Record<CategoryType, string> = {
-  makanan: "Makanan",
-  minuman: "Minuman",
-  snack: "Snack",
-  rokok: "Rokok",
-  sembako: "Sembako",
-};
 
 const formatRp = (num: number) => "Rp " + num.toLocaleString("id-ID");
 
@@ -82,10 +50,6 @@ interface ItemCardProps {
 }
 
 const ItemCard: React.FC<ItemCardProps> = ({ item, S, onStockPress }) => {
-  const categoryType = jenisToCategory(item.jenis);
-  const emoji = categoryEmojis[categoryType];
-  const label = categoryLabels[categoryType];
-
   const modal = item.harga_modal || 0;
   const jual = item.harga_jual || 0;
   const profit = jual - modal;
@@ -155,28 +119,54 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 }) => {
   const { userId } = useCurrentUser();
   const [nama, setNama] = useState("");
+  const [jenisList, setJenisList] = useState<string[]>([]);
   const [jenis, setJenis] = useState("");
   const [jenisCustom, setJenisCustom] = useState("");
   const [kategori, setKategori] = useState("");
+  const [kategoriCustom, setKategoriCustom] = useState("");
+  const [kategoriList, setKategoriList] = useState<string[]>([]);
   const [detail, setDetail] = useState("");
   const [hargaModal, setHargaModal] = useState("");
   const [hargaJual, setHargaJual] = useState("");
 
-  const scheme = useColorScheme();
-  const isDark = scheme === "dark";
+  const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
+
+  // Load kategori saat jenis berubah
+  useEffect(() => {
+    loadJenisList();
+  }, []);
+
+  const loadJenisList = () => {
+    const jenisData = getJenisItems();
+    setJenisList(jenisData);
+  };
+
+  const loadKategoriList = (jenisValue: string) => {
+    setJenis(jenisValue);
+    if (jenisValue && jenisValue !== "__custom__") {
+      const katList = getKategoriItems(jenisValue);
+      setKategoriList(katList);
+      setKategori("");
+    } else {
+      setKategoriList([]);
+      setKategori("");
+    }
+  };
 
   const modalNum = parseFloat(hargaModal) || 0;
   const jualNum = parseFloat(hargaJual) || 0;
   const labaNum = jualNum - modalNum;
   const marginPct = modalNum > 0 ? Math.round((labaNum / modalNum) * 100) : 0;
   const jenisAkhir = jenis === "__custom__" ? jenisCustom.trim() : jenis;
+  const kategoriAkhir =
+    kategori === "__custom__" ? kategoriCustom.trim() : kategori;
 
   const handleSimpan = () => {
     if (!nama.trim()) return Alert.alert("Error", "Nama item wajib diisi");
     if (!jenisAkhir) return Alert.alert("Error", "Jenis wajib dipilih");
-    if (!kategori.trim()) return Alert.alert("Error", "Kategori wajib diisi");
+    if (!kategoriAkhir) return Alert.alert("Error", "Kategori wajib diisi");
     if (!hargaModal || isNaN(modalNum))
       return Alert.alert("Error", "Harga modal tidak valid");
     if (!hargaJual || isNaN(jualNum))
@@ -186,7 +176,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       const itemId = createItem(
         nama.trim(),
         jenisAkhir,
-        kategori.trim(),
+        kategoriAkhir,
         detail.trim(),
         modalNum,
         jualNum,
@@ -197,6 +187,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       createKasForItem(itemId, nama.trim(), userId);
 
       Alert.alert("Sukses", `Item "${nama}" berhasil ditambahkan`);
+      console.log("Item created with ID:", itemId);
+      console.log({
+        nama: nama.trim(),
+        jenis: jenisAkhir,
+        kategori: kategoriAkhir,
+        detail: detail.trim(),
+        harga_modal: modalNum,
+        harga_jual: jualNum,
+        user_id: userId,
+      });
 
       // Reset form
       handleCancel();
@@ -212,6 +212,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     setJenis("");
     setJenisCustom("");
     setKategori("");
+    setKategoriCustom("");
     setDetail("");
     setHargaModal("");
     setHargaJual("");
@@ -221,7 +222,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   if (!visible) return null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.pageBg }}>
+    <SafeAreaView style={S.safeArea}>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={C.headerBg}
@@ -231,62 +232,18 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         style={{ flex: 1 }}
       >
         <ScrollView
-          style={{
-            flex: 1,
-            backgroundColor: C.pageBg,
-            paddingHorizontal: 18,
-            paddingTop: 16,
-          }}
+          style={S.headerForm}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text
-            style={{
-              fontSize: 24,
-              fontWeight: "700",
-              color: C.titleText,
-              marginBottom: 20,
-            }}
-          >
-            Tambah Item Baru
-          </Text>
+          <Text style={S.headerFormText}>Tambah Item Baru</Text>
 
           {/* ── INFORMASI ITEM ── */}
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "bold",
-              color: C.titleText,
-              marginBottom: 12,
-              marginTop: 8,
-            }}
-          >
-            Informasi Item
-          </Text>
-
+          <Text style={S.headerFormSubtext}>Informasi Item</Text>
           {/* Nama Item */}
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: C.cardTitleText,
-              marginBottom: 6,
-            }}
-          >
-            Nama Item *
-          </Text>
+          <Text style={S.fieldLabel}>Nama Item</Text>
           <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: C.searchBorder,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              fontSize: 14,
-              marginBottom: 12,
-              backgroundColor: C.searchBg,
-              color: C.searchText,
-            }}
+            style={S.inputBase}
             value={nama}
             onChangeText={setNama}
             placeholder="contoh: Aqua 600ml"
@@ -295,153 +252,116 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           />
 
           {/* Jenis */}
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: C.cardTitleText,
-              marginBottom: 6,
-            }}
-          >
-            Jenis *
-          </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              gap: 8,
-              marginBottom: 12,
-            }}
-          >
-            {JENIS_PRESET.map((j) => (
+          <Text style={S.fieldLabel}>Jenis</Text>
+          <>
+            <View style={S.chipRow}>
+              {jenisList.map((j) => (
+                <TouchableOpacity
+                  key={j}
+                  style={[
+                    S.chipBase,
+                    jenis === j ? S.chipActive : S.chipInactive,
+                  ]}
+                  onPress={() => loadKategoriList(j)}
+                >
+                  <Text
+                    style={jenis === j ? S.chipTextActive : S.chipTextInactive}
+                  >
+                    {j}
+                  </Text>
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
-                key={j}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 6,
-                  borderWidth: 1.5,
-                  borderColor:
-                    jenis === j ? C.chipActiveBorder : C.chipDefaultBorder,
-                  backgroundColor:
-                    jenis === j ? C.chipActiveBg : C.chipDefaultBg,
-                }}
-                onPress={() => setJenis(j)}
+                style={[
+                  S.chipBase,
+                  jenis === "__custom__" ? S.chipActive : S.chipInactive,
+                ]}
+                onPress={() => setJenis("__custom__")}
               >
                 <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: jenis === j ? C.chipActiveText : C.cardSubText,
-                  }}
+                  style={
+                    jenis === "__custom__"
+                      ? S.chipTextActive
+                      : S.chipTextInactive
+                  }
                 >
-                  {j}
+                  + Lainnya
                 </Text>
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 6,
-                borderWidth: 1.5,
-                borderColor:
-                  jenis === "__custom__"
-                    ? C.chipActiveBorder
-                    : C.chipDefaultBorder,
-                backgroundColor:
-                  jenis === "__custom__" ? C.chipActiveBg : C.chipDefaultBg,
-              }}
-              onPress={() => setJenis("__custom__")}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: "600",
-                  color:
-                    jenis === "__custom__" ? C.chipActiveText : C.cardSubText,
-                }}
-              >
-                + Lainnya
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
 
-          {jenis === "__custom__" && (
-            <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: C.searchBorder,
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                fontSize: 14,
-                marginBottom: 12,
-                backgroundColor: C.searchBg,
-                color: C.searchText,
-              }}
-              value={jenisCustom}
-              onChangeText={setJenisCustom}
-              placeholder="Ketik jenis custom..."
-              placeholderTextColor={C.searchPlaceholder}
-              autoFocus
-            />
-          )}
-
+            {jenis === "__custom__" && (
+              <TextInput
+                style={S.inputBase}
+                value={jenisCustom}
+                onChangeText={setJenisCustom}
+                placeholder="Ketik jenis custom..."
+                placeholderTextColor={C.searchPlaceholder}
+                autoFocus
+              />
+            )}
+          </>
           {/* Kategori */}
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: C.cardTitleText,
-              marginBottom: 6,
-            }}
-          >
-            Kategori *
-          </Text>
-          <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: C.searchBorder,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              fontSize: 14,
-              marginBottom: 12,
-              backgroundColor: C.searchBg,
-              color: C.searchText,
-            }}
-            value={kategori}
-            onChangeText={setKategori}
-            placeholder="contoh: Elektronik, Apparel, dll"
-            placeholderTextColor={C.searchPlaceholder}
-          />
-
+          <Text style={S.fieldLabel}>Kategori</Text>
+          {kategoriList.length > 0 ? (
+            <>
+              <View style={S.chipRow}>
+                {kategoriList.map((kat) => (
+                  <TouchableOpacity
+                    key={kat}
+                    style={[
+                      S.chipBase,
+                      kategori === kat ? S.chipActive : S.chipInactive,
+                    ]}
+                    onPress={() => setKategori(kat)}
+                  >
+                    <Text
+                      style={
+                        kategori === kat ? S.chipTextActive : S.chipTextInactive
+                      }
+                    >
+                      {kat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  style={[
+                    S.chipBase,
+                    kategori === "__custom__" ? S.chipActive : S.chipInactive,
+                  ]}
+                  onPress={() => setKategori("__custom__")}
+                >
+                  <Text
+                    style={
+                      kategori === "__custom__"
+                        ? S.chipTextActive
+                        : S.chipTextInactive
+                    }
+                  >
+                    + Tambah
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {kategori === "__custom__" && (
+                <TextInput
+                  style={S.inputBase}
+                  value={kategoriCustom}
+                  onChangeText={setKategoriCustom}
+                  placeholder="Ketik kategori baru..."
+                  placeholderTextColor={C.searchPlaceholder}
+                  autoFocus
+                />
+              )}
+            </>
+          ) : (
+            <Text style={S.helperText}>
+              Pilih jenis terlebih dahulu untuk melihat kategori
+            </Text>
+          )}
           {/* Detail */}
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: C.cardTitleText,
-              marginBottom: 6,
-            }}
-          >
-            Detail / Keterangan
-          </Text>
+          <Text style={S.fieldLabel}>Detail / Keterangan</Text>
           <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: C.searchBorder,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              fontSize: 14,
-              marginBottom: 12,
-              backgroundColor: C.searchBg,
-              color: C.searchText,
-              height: 80,
-              textAlignVertical: "top",
-            }}
+            style={S.inputBase}
             value={detail}
             onChangeText={setDetail}
             placeholder="ukuran, varian, warna, dll..."
@@ -451,42 +371,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           />
 
           {/* ── HARGA & STOK ── */}
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "bold",
-              color: C.titleText,
-              marginBottom: 12,
-              marginTop: 20,
-            }}
-          >
-            Harga & Stok
-          </Text>
+          <Text style={S.fieldLabel}>Harga & Stok</Text>
 
-          <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+          <View style={S.twoColumnRow}>
             {/* Harga Modal */}
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: "600",
-                  color: C.cardTitleText,
-                  marginBottom: 6,
-                }}
-              >
-                Harga Modal (Rp) *
-              </Text>
+            <View style={S.twoColumnItem}>
+              <Text style={S.helperText}>Harga Modal (Rp)</Text>
               <TextInput
-                style={{
-                  borderWidth: 1,
-                  borderColor: C.searchBorder,
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  fontSize: 14,
-                  backgroundColor: C.searchBg,
-                  color: C.searchText,
-                }}
+                style={S.inputBase}
                 value={hargaModal}
                 onChangeText={setHargaModal}
                 placeholder="0"
@@ -494,42 +386,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 keyboardType="numeric"
               />
               {hargaModal && (
-                <Text
-                  style={{
-                    fontSize: 11,
-                    color: C.profitText,
-                    marginTop: 4,
-                    fontWeight: "500",
-                  }}
-                >
-                  {formatRp(modalNum)}
-                </Text>
+                <Text style={S.inputSmallHint}>{formatRp(modalNum)}</Text>
               )}
             </View>
 
             {/* Harga Jual */}
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: "600",
-                  color: C.cardTitleText,
-                  marginBottom: 6,
-                }}
-              >
-                Harga Jual (Rp) *
-              </Text>
+            <View style={S.twoColumnItem}>
+              <Text style={S.helperText}>Harga Jual (Rp)</Text>
               <TextInput
-                style={{
-                  borderWidth: 1,
-                  borderColor: C.searchBorder,
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  fontSize: 14,
-                  backgroundColor: C.searchBg,
-                  color: C.searchText,
-                }}
+                style={S.inputBase}
                 value={hargaJual}
                 onChangeText={setHargaJual}
                 placeholder="0"
@@ -537,124 +402,38 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 keyboardType="numeric"
               />
               {hargaJual && (
-                <Text
-                  style={{
-                    fontSize: 11,
-                    color: C.profitText,
-                    marginTop: 4,
-                    fontWeight: "500",
-                  }}
-                >
-                  {formatRp(jualNum)}
-                </Text>
+                <Text style={S.inputSmallHint}>{formatRp(jualNum)}</Text>
               )}
             </View>
           </View>
 
           {/* ── MARGIN PREVIEW ── */}
           {hargaModal && hargaJual && (
-            <View
-              style={{
-                backgroundColor: isDark ? "rgba(76, 175, 80, 0.1)" : "#f0fdf4",
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 12,
-                borderLeftWidth: 4,
-                borderLeftColor: C.profitText,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ fontSize: 12, color: C.cardDescText }}>
-                  Laba / Unit
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "bold",
-                    color: C.profitText,
-                  }}
-                >
-                  {formatRp(labaNum)}
-                </Text>
+            <View style={S.previewCard}>
+              <View style={S.previewRow}>
+                <Text style={S.previewLabel}>Laba / Unit</Text>
+                <Text style={S.previewValue}>{formatRp(labaNum)}</Text>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text style={{ fontSize: 12, color: C.cardDescText }}>
-                  Margin
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: "bold",
-                    color: C.profitText,
-                  }}
-                >
-                  {marginPct}%
-                </Text>
+              <View style={S.previewRow}>
+                <Text style={S.previewLabel}>Margin</Text>
+                <Text style={S.previewValue}>{marginPct}%</Text>
               </View>
             </View>
           )}
 
           {/* ── BUTTONS ── */}
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 10,
-              marginTop: 20,
-              marginBottom: 30,
-            }}
-          >
+          <View style={S.buttonRow}>
             <TouchableOpacity
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                borderRadius: 8,
-                alignItems: "center",
-                backgroundColor: C.chipDefaultBg,
-                borderWidth: 1,
-                borderColor: C.searchBorder,
-              }}
+              style={[S.buttonBase, S.secondaryButton]}
               onPress={handleCancel}
             >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: C.cardSubText,
-                }}
-              >
-                Batal
-              </Text>
+              <Text style={S.secondaryButtonText}>Batal</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                borderRadius: 8,
-                alignItems: "center",
-                backgroundColor: C.addBtnBg,
-              }}
+              style={[S.buttonBase, S.primaryButton]}
               onPress={handleSimpan}
             >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: C.addBtnText,
-                }}
-              >
-                Simpan Item
-              </Text>
+              <Text style={S.primaryButtonText}>Simpan Item</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -689,8 +468,8 @@ const StockModal: React.FC<StockModalProps> = ({
   const [addQuantityInput, setAddQuantityInput] = useState("");
   const [hargaBeliStok, setHargaBeliStok] = useState("");
 
-  const scheme = useColorScheme();
-  const isDark = scheme === "dark";
+  const { isDark } = useTheme();
+  const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
 
   const handleAddQuantity = () => {
@@ -743,85 +522,29 @@ const StockModal: React.FC<StockModalProps> = ({
       animationType="slide"
       onRequestClose={handleClose}
     >
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          justifyContent: "flex-end",
-        }}
-      >
-        <View
-          style={{
-            backgroundColor: C.cardBg,
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            padding: 20,
-            paddingBottom: 30,
-          }}
-        >
+      <View style={S.modalOverlay}>
+        <View style={S.modalSheet}>
           {/* Header */}
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: "bold",
-              color: C.cardTitleText,
-              marginBottom: 16,
-            }}
-          >
-            Tambah Stok: {itemName}
-          </Text>
+          <Text style={S.modalTitle}>Tambah Stok: {itemName}</Text>
 
           {/* Current Stock Display */}
           <View
-            style={{
-              backgroundColor: isDark ? "rgba(76, 175, 80, 0.1)" : "#f0fdf4",
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 16,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              borderLeftWidth: 4,
-              borderLeftColor: C.profitText,
-            }}
+            style={[
+              S.infoBox,
+              {
+                backgroundColor: isDark ? "rgba(76, 175, 80, 0.1)" : "#f0fdf4",
+                borderLeftColor: C.profitText,
+              },
+            ]}
           >
-            <Text style={{ fontSize: 12, color: C.cardDescText }}>
-              Stok Saat Ini:
-            </Text>
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "bold",
-                color: C.profitText,
-              }}
-            >
-              {currentStock} unit
-            </Text>
+            <Text style={S.infoBoxLabel}>Stok Saat Ini:</Text>
+            <Text style={S.infoBoxValue}>{currentStock} unit</Text>
           </View>
 
           {/* Quantity Input */}
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "600",
-              color: C.cardTitleText,
-              marginBottom: 6,
-            }}
-          >
-            Jumlah yang ditambahkan *
-          </Text>
+          <Text style={S.stockNormalText}>Jumlah yang ditambahkan *</Text>
           <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: C.searchBorder,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              fontSize: 14,
-              marginBottom: 12,
-              backgroundColor: C.searchBg,
-              color: C.searchText,
-            }}
+            style={S.inputBase}
             value={addQuantityInput}
             onChangeText={setAddQuantityInput}
             placeholder="Masukkan jumlah"
@@ -831,27 +554,11 @@ const StockModal: React.FC<StockModalProps> = ({
           />
 
           {/* Price Input */}
-          <Text
-            style={{
-              fontSize: 12,
-              color: C.cardDescText,
-              marginBottom: 6,
-            }}
-          >
+          <Text style={S.stockNormalText}>
             Harga Beli (opsional, untuk catatan)
           </Text>
           <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: C.searchBorder,
-              borderRadius: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              fontSize: 14,
-              marginBottom: 16,
-              backgroundColor: C.searchBg,
-              color: C.searchText,
-            }}
+            style={S.inputBase}
             value={hargaBeliStok}
             onChangeText={setHargaBeliStok}
             placeholder="Masukkan harga beli barang"
@@ -860,48 +567,18 @@ const StockModal: React.FC<StockModalProps> = ({
           />
 
           {/* Buttons */}
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={S.buttonRow}>
             <TouchableOpacity
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                borderRadius: 8,
-                alignItems: "center",
-                backgroundColor: C.chipDefaultBg,
-                borderWidth: 1,
-                borderColor: C.searchBorder,
-              }}
+              style={[S.buttonBase, S.secondaryButton]}
               onPress={handleClose}
             >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: C.cardSubText,
-                }}
-              >
-                Batal
-              </Text>
+              <Text style={S.secondaryButtonText}>Batal</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{
-                flex: 1,
-                paddingVertical: 12,
-                borderRadius: 8,
-                alignItems: "center",
-                backgroundColor: C.addBtnBg,
-              }}
+              style={[S.buttonBase, S.primaryButton]}
               onPress={handleAddQuantity}
             >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: C.addBtnText,
-                }}
-              >
-                Tambah Stok
-              </Text>
+              <Text style={S.primaryButtonText}>Tambah Stok</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -926,8 +603,7 @@ export default function BarangScreen() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
 
-  const scheme = useColorScheme();
-  const isDark = scheme === "dark";
+  const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
 
@@ -1035,64 +711,58 @@ export default function BarangScreen() {
           </View>
 
           {/* ── FILTER CHIPS ── */}
-          <View style={S.filterWrapper}>
+          <ScrollView
+            style={S.filterWrapper}
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+          >
             <View style={S.filterRow}>
               {/* "Semua" chip */}
               <TouchableOpacity
-                style={S.chipActive}
+                style={
+                  (S.chipBase,
+                  selectedFilter === "all"
+                    ? S.chipFilterActive
+                    : S.chipFilterInactive)
+                }
                 activeOpacity={0.8}
                 onPress={() => setSelectedFilter("all")}
               >
                 <Text
                   style={
                     selectedFilter === "all"
-                      ? S.chipActiveText
-                      : {
-                          color: C.cardSubText,
-                          fontSize: 13,
-                          fontWeight: "600",
-                        }
+                      ? S.chipTextActive
+                      : S.chipTextInactive
                   }
                 >
                   Semua
                 </Text>
               </TouchableOpacity>
-
               {/* Jenis chips */}
               {jenisList.map((jenis) => (
                 <TouchableOpacity
                   key={jenis}
                   style={
                     selectedFilter === jenis
-                      ? S.chipActive
-                      : {
-                          paddingHorizontal: 12,
-                          paddingVertical: 8,
-                          borderRadius: 6,
-                          borderWidth: 1.5,
-                          borderColor: C.chipDefaultBorder,
-                          backgroundColor: C.chipDefaultBg,
-                        }
+                      ? S.chipFilterActive
+                      : S.chipFilterInactive
                   }
                   activeOpacity={0.7}
                   onPress={() => setSelectedFilter(jenis)}
                 >
                   <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: "600",
-                      color:
-                        selectedFilter === jenis
-                          ? C.chipActiveText
-                          : C.cardSubText,
-                    }}
+                    style={
+                      selectedFilter === jenis
+                        ? S.chipTextActive
+                        : S.chipTextInactive
+                    }
                   >
                     {jenis}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </ScrollView>
 
           {/* ── META COUNT ── */}
           <View style={S.metaWrapper}>
@@ -1102,49 +772,34 @@ export default function BarangScreen() {
             </Text>
           </View>
 
-          {/* ── LIST ── */}
-          {filteredItems.length === 0 ? (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 16,
-                  color: C.cardSubText,
-                  fontWeight: "600",
-                }}
-              >
-                {searchQuery || selectedFilter !== "all"
-                  ? "Tidak ada item"
-                  : "Belum ada item"}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: C.cardDescText,
-                  marginTop: 4,
-                }}
-              >
-                {searchQuery || selectedFilter !== "all"
-                  ? "Coba ubah pencarian atau filter"
-                  : "Klik tombol + Tambah untuk memulai"}
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredItems}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={S.listContent}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <ItemCard item={item} S={S} onStockPress={openStockModal} />
-              )}
-            />
-          )}
+          {/* ── LIST CONTAINER ── */}
+          <View style={{ justifyContent: "flex-start" }}>
+            {/* ── LIST ── */}
+            {filteredItems.length === 0 ? (
+              <View style={S.emptyState}>
+                <Text style={S.emptyTitle}>
+                  {searchQuery || selectedFilter !== "all"
+                    ? "Tidak ada item"
+                    : "Belum ada item"}
+                </Text>
+                <Text style={S.emptyDesc}>
+                  {searchQuery || selectedFilter !== "all"
+                    ? "Coba ubah pencarian atau filter"
+                    : "Klik tombol + Tambah untuk memulai"}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredItems}
+                keyExtractor={(item) => item.id.toString()}
+                contentContainerStyle={S.listContent}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <ItemCard item={item} S={S} onStockPress={openStockModal} />
+                )}
+              />
+            )}
+          </View>
         </SafeAreaView>
       </View>
 

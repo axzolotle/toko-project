@@ -1,3 +1,5 @@
+import { getTransaksiHarian } from "@/database/db2";
+import { useTheme } from "@/lib/ThemeContext";
 import {
   darkColors,
   darkStyles,
@@ -7,14 +9,13 @@ import {
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ============================================================
 //  TYPES
@@ -26,7 +27,6 @@ interface Transaksi {
   id: number; // nomor urut tampil di card (descending)
   nama: string;
   kategori: Kategori;
-  subKategori: string;
   harga: number; // harga jual
   modal: number; // harga beli / modal
   tanggal: string; // 'YYYY-MM-DD'
@@ -34,7 +34,6 @@ interface Transaksi {
 
 interface RingkasanJenis {
   kategori: Kategori;
-  emoji: string;
   jumlah: number; // qty transaksi
   totalOmset: number;
 }
@@ -53,89 +52,30 @@ interface LaporanData {
 //     sesungguhnya. Kembalikan tipe data yang sama.
 // ============================================================
 
-/** Ambil semua transaksi untuk tanggal tertentu */
+/** Ambil semua transaksi untuk tanggal tertentu dari database SQLite */
 const db_getTransaksiByTanggal = async (
   tanggal: string,
 ): Promise<Transaksi[]> => {
-  // TODO: ganti dengan query SQLite:
-  //   SELECT * FROM transaksi WHERE tanggal = ? ORDER BY id DESC
-  await new Promise((r) => setTimeout(r, 400)); // simulasi delay DB
-
-  // Data mock — sesuai gambar
-  const semua: Transaksi[] = [
-    {
-      id: 6,
-      nama: "Pulsa Tri 10rb",
-      kategori: "Voucher",
-      subKategori: "Tri",
-      harga: 11000,
-      modal: 9500,
-      tanggal,
-    },
-    {
-      id: 5,
-      nama: "Token Listrik 50rb",
-      kategori: "Digital",
-      subKategori: "Token",
-      harga: 51000,
-      modal: 49500,
-      tanggal,
-    },
-    {
-      id: 4,
-      nama: "Headset JBL Biru",
-      kategori: "Barang Fisik",
-      subKategori: "Headset",
-      harga: 75000,
-      modal: 55000,
-      tanggal,
-    },
-    {
-      id: 3,
-      nama: "Transfer Dana 50rb",
-      kategori: "Transfer",
-      subKategori: "Dana",
-      harga: 52000,
-      modal: 50000,
-      tanggal,
-    },
-    {
-      id: 2,
-      nama: "Paket Indosat 5GB",
-      kategori: "Voucher",
-      subKategori: "Indosat",
-      harga: 27000,
-      modal: 22000,
-      tanggal,
-    },
-    {
-      id: 1,
-      nama: "Kabel Type-C 1m",
-      kategori: "Barang Fisik",
-      subKategori: "Kabel",
-      harga: 20000,
-      modal: 12000,
-      tanggal,
-    },
-  ];
-
-  return semua.filter((t) => t.tanggal === tanggal);
+  try {
+    const rows = getTransaksiHarian(tanggal);
+    return rows.map((row) => ({
+      id: row.id,
+      nama: row.item_nama,
+      kategori: row.item_jenis as Kategori,
+      harga: row.harga_jual,
+      modal: row.harga_modal,
+      tanggal: row.tanggal,
+    }));
+  } catch (error) {
+    console.error("Error fetching transaksi harian:", error);
+    return [];
+  }
 };
 
 // ============================================================
 //  2. LAYER KALKULASI / TRANSFORM
 //     Fungsi-fungsi murni — tidak perlu diubah
 // ============================================================
-
-const KATEGORI_CONFIG: Record<
-  Kategori,
-  { emoji: string; barColor: string; dotColor: string }
-> = {
-  "Barang Fisik": { emoji: "📦", barColor: "#c07830", dotColor: "#f59e0b" },
-  Transfer: { emoji: "🏦", barColor: "#7060d0", dotColor: "#4caf50" },
-  Digital: { emoji: "💳", barColor: "#3ecb38", dotColor: "#4caf50" },
-  Voucher: { emoji: "🎫", barColor: "#e04030", dotColor: "#f59e0b" },
-};
 
 const hitungRingkasan = (list: Transaksi[]): LaporanData => {
   const totalOmset = list.reduce((s, t) => s + t.harga, 0);
@@ -147,7 +87,6 @@ const hitungRingkasan = (list: Transaksi[]): LaporanData => {
     if (!map[t.kategori]) {
       map[t.kategori] = {
         kategori: t.kategori,
-        emoji: KATEGORI_CONFIG[t.kategori].emoji,
         jumlah: 0,
         totalOmset: 0,
       };
@@ -260,22 +199,16 @@ const StatsRow: React.FC<{ data: LaporanData; S: any }> = ({ data, S }) => (
 const PerJenisSection: React.FC<{
   perJenis: RingkasanJenis[];
   S: any;
-  C: typeof lightColors;
-}> = ({ perJenis, S, C }) => (
+}> = ({ perJenis, S }) => (
   <>
     <Text style={S.sectionLabel}>Per Jenis</Text>
-    {perJenis.map((j) => {
-      const cfg = KATEGORI_CONFIG[j.kategori];
-      return (
-        <View key={j.kategori} style={S.jenisCard}>
-          <View style={[S.jenisBar, { backgroundColor: cfg.barColor }]} />
-          <Text style={S.jenisEmoji}>{cfg.emoji}</Text>
-          <Text style={S.jenisName}>{j.kategori}</Text>
-          <Text style={S.jenisCount}>{j.jumlah}×</Text>
-          <Text style={S.jenisPrice}>{formatRp(j.totalOmset)}</Text>
-        </View>
-      );
-    })}
+    {perJenis.map((j) => (
+      <View key={j.kategori} style={S.jenisCard}>
+        <Text style={S.jenisName}>{j.kategori}</Text>
+        <Text style={S.jenisCount}>{j.jumlah}×</Text>
+        <Text style={S.jenisPrice}>{formatRp(j.totalOmset)}</Text>
+      </View>
+    ))}
   </>
 );
 
@@ -283,14 +216,11 @@ const PerJenisSection: React.FC<{
 const RiwayatSection: React.FC<{
   riwayat: Transaksi[];
   S: any;
-  C: typeof lightColors;
-}> = ({ riwayat, S, C }) => (
+}> = ({ riwayat, S }) => (
   <>
     <Text style={S.sectionLabel}>Riwayat ({riwayat.length})</Text>
     {riwayat.map((t) => {
       const laba = t.harga - t.modal;
-      const cfg = KATEGORI_CONFIG[t.kategori];
-      const dotColor = cfg.dotColor;
       return (
         <View key={t.id} style={S.riwayatCard}>
           {/* Nomor urut */}
@@ -301,16 +231,14 @@ const RiwayatSection: React.FC<{
           {/* Info produk */}
           <View style={S.riwayatInfo}>
             <Text style={S.riwayatName}>{t.nama}</Text>
-            <Text style={S.riwayatMeta}>
-              {cfg.emoji} {t.kategori} · {t.subKategori}
-            </Text>
+            <Text style={S.riwayatMeta}>{t.kategori}</Text>
           </View>
 
           {/* Harga + laba */}
           <View style={S.riwayatRight}>
             <View style={S.riwayatPriceRow}>
               <Text style={S.riwayatPrice}>{formatRp(t.harga)}</Text>
-              <View style={[S.riwayatDot, { backgroundColor: dotColor }]} />
+              <View style={S.riwayatDot} />
             </View>
             <Text style={S.riwayatProfit}>+{formatRp(laba)}</Text>
           </View>
@@ -324,7 +252,7 @@ const RiwayatSection: React.FC<{
 //  5. MAIN SCREEN EXPORT
 // ============================================================
 const LaporanScreen: React.FC = () => {
-  const isDark = useColorScheme() === "dark";
+  const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
 
@@ -403,10 +331,10 @@ const LaporanScreen: React.FC = () => {
               <StatsRow data={data} S={S} />
 
               {/* Per Jenis */}
-              <PerJenisSection perJenis={data.perJenis} S={S} C={C} />
+              <PerJenisSection perJenis={data.perJenis} S={S} />
 
               {/* Riwayat */}
-              <RiwayatSection riwayat={data.riwayat} S={S} C={C} />
+              <RiwayatSection riwayat={data.riwayat} S={S} />
             </ScrollView>
           )}
         </SafeAreaView>

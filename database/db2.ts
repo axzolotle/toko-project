@@ -70,6 +70,70 @@ export type kas = {
   operator_id: number;
 };
 
+type HistoriJenis = "rekap_kas" | "operasional" | "kerugian";
+
+interface RekapHarianRow {
+  id: number;
+  tanggal: string;
+  omzet: number;
+  hpp: number;
+  laba_kotor: number;
+  operasional: number;
+  kerugian: number;
+  laba_bersih: number;
+  locked: number;
+  created_by: number;
+  created_at: string;
+  synced?: number;
+}
+
+interface RekapKasRow {
+  id: number;
+  nama: string;
+  kas_id: number | null;
+  jumlah: number;
+  tanggal: string;
+  operator_id: number;
+}
+
+export interface HistoriItem {
+  id: number;
+  jenis: HistoriJenis;
+  nama: string;
+  deskripsi: string;
+  nilai: number;
+  waktu: string; // sekarang belum punya jam, jadi boleh "-" dulu
+}
+
+export interface HistoriGroup {
+  tanggal: string;
+  labelTanggal: string;
+  terkunci: boolean;
+  rekap: RekapHarianRow | null;
+  items: HistoriItem[];
+}
+
+export type RekapKas = {
+  id: number;
+  uuid: string | null;
+  nama: string;
+  kas_id: number | null;
+  jumlah: number;
+  tanggal: string;
+  synced: number;
+  operator_id: number;
+};
+
+interface CreateRekapHarianParams {
+  omzet: number;
+  hpp: number;
+  labaKotor: number;
+  operasional: number;
+  kerugian: number;
+  labaBersih: number;
+  createdBy: number;
+}
+
 export function initDB() {
   db.execSync(
     "CREATE TABLE IF NOT EXISTS users (" +
@@ -157,6 +221,394 @@ export function initDB() {
       "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
+  db.execSync(
+    "CREATE TABLE IF NOT EXISTS RekapKas (" +
+      "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
+      "  uuid         TEXT UNIQUE," +
+      "  nama         TEXT NOT NULL," +
+      "  kas_id       INTEGER," +
+      "  jumlah        REAL NOT NULL," +
+      "  tanggal       TEXT NOT NULL," +
+      "  operator_id   INTEGER NOT NULL," +
+      "  synced        INTEGER DEFAULT 0," +
+      "  FOREIGN KEY (kas_id) REFERENCES kas(id)," +
+      "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
+      ")",
+  );
+  db.execSync(
+    "CREATE TABLE IF NOT EXISTS kerugian (" +
+      "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
+      "  keterangan   TEXT DEFAULT ''," +
+      "  jumlah        REAL NOT NULL," +
+      "  operator_id   INTEGER NOT NULL," +
+      "  tanggal       TEXT NOT NULL," +
+      "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
+      ")",
+  );
+  db.execSync(
+    "CREATE TABLE IF NOT EXISTS operasional (" +
+      "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
+      "  keterangan   TEXT DEFAULT ''," +
+      "  jumlah        REAL NOT NULL," +
+      "  operator_id   INTEGER NOT NULL," +
+      "  tanggal       TEXT NOT NULL," +
+      "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
+      ")",
+  );
+  db.execSync(
+    "CREATE TABLE IF NOT EXISTS rekap_harian (" +
+      "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
+      "  tanggal      TEXT NOT NULL," +
+      "  omzet        REAL NOT NULL," +
+      "  hpp          REAL NOT NULL," +
+      "  laba_kotor   REAL NOT NULL," +
+      "  operasional  REAL NOT NULL," +
+      "  kerugian     REAL NOT NULL," +
+      "  laba_bersih  REAL NOT NULL," +
+      "  locked       INTEGER DEFAULT 0," +
+      "  created_by   INTEGER NOT NULL," +
+      "  created_at   TEXT NOT NULL," +
+      "  synced        INTEGER DEFAULT 0," +
+      "  FOREIGN KEY (created_by) REFERENCES users(id)" +
+      ")",
+  );
+}
+
+const formatLocalDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const labelTanggalPanjang = (iso: string) =>
+  new Date(iso + "T00:00:00").toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+export const db_getHistori = async (): Promise<HistoriGroup[]> => {
+  try {
+    const dates = db.getAllSync<{ tanggal: string }>(
+      `
+      SELECT tanggal
+      FROM (
+        SELECT tanggal FROM rekap_harian
+        UNION
+        SELECT tanggal FROM operasional
+        UNION
+        SELECT tanggal FROM kerugian
+        UNION
+        SELECT tanggal FROM RekapKas
+      )
+      ORDER BY tanggal DESC
+      `,
+    );
+
+    const groups: HistoriGroup[] = dates.map(({ tanggal }) => {
+      const rekap = getRekapHarianByTanggal(tanggal) as RekapHarianRow | null;
+      const kasRows = getRekapKasHarian(tanggal) as RekapKasRow[];
+      const operasionalRows = getOperasionalByTanggal(tanggal) as Array<{
+        id: number;
+        keterangan: string;
+        jumlah: number;
+        operator_id: number;
+        tanggal: string;
+      }>;
+      const kerugianRows = getKerugianByTanggal(tanggal) as Array<{
+        id: number;
+        keterangan: string;
+        jumlah: number;
+        operator_id: number;
+        tanggal: string;
+      }>;
+
+      const items: HistoriItem[] = [
+        ...kasRows.map((row) => ({
+          id: row.id,
+          jenis: "rekap_kas" as const,
+          nama: row.nama,
+          deskripsi:
+            row.kas_id !== null ? `Kas ID: ${row.kas_id}` : "Tanpa kas tujuan",
+          nilai: row.jumlah,
+          waktu: "-",
+        })),
+        ...operasionalRows.map((row) => ({
+          id: row.id,
+          jenis: "operasional" as const,
+          nama: "Operasional",
+          deskripsi: row.keterangan || "Tanpa keterangan",
+          nilai: -Math.abs(row.jumlah),
+          waktu: "-",
+        })),
+        ...kerugianRows.map((row) => ({
+          id: row.id,
+          jenis: "kerugian" as const,
+          nama: "Kerugian",
+          deskripsi: row.keterangan || "Tanpa keterangan",
+          nilai: -Math.abs(row.jumlah),
+          waktu: "-",
+        })),
+      ];
+
+      return {
+        tanggal,
+        labelTanggal: labelTanggalPanjang(tanggal),
+        terkunci: !!rekap?.locked,
+        rekap,
+        items,
+      };
+    });
+
+    return groups;
+  } catch (error) {
+    console.error("db_getHistori error:", error);
+    return [];
+  }
+};
+
+// ============================================================
+// KERUGIAN
+// ============================================================
+
+export const createKerugian = (
+  keterangan: string,
+  jumlah: number,
+  operatorId: number,
+) => {
+  try {
+    const tanggal = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
+    const result = db.runSync(
+      `INSERT INTO kerugian (
+        keterangan,
+        jumlah,
+        operator_id,
+        tanggal
+      ) VALUES (?, ?, ?, ?)`,
+      [keterangan, jumlah, operatorId, tanggal],
+    );
+
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error("createKerugian error:", error);
+    throw error;
+  }
+};
+
+export const getKerugianByTanggal = (tanggal: string) => {
+  try {
+    return db.getAllSync(
+      `SELECT *
+       FROM kerugian
+       WHERE tanggal = ?
+       ORDER BY id DESC`,
+      [tanggal],
+    );
+  } catch (error) {
+    console.error("getKerugianByTanggal error:", error);
+    return [];
+  }
+};
+
+export const getTotalKerugianByTanggal = (tanggal: string): number => {
+  try {
+    const result = db.getFirstSync<{
+      total: number;
+    }>(
+      `SELECT COALESCE(SUM(jumlah), 0) as total
+       FROM kerugian
+       WHERE tanggal = ?`,
+      [tanggal],
+    );
+
+    return result?.total ?? 0;
+  } catch (error) {
+    console.error("getTotalKerugianByTanggal error:", error);
+    return 0;
+  }
+};
+
+// ============================================================
+// OPERASIONAL
+// ============================================================
+
+export const createOperasional = (
+  keterangan: string,
+  jumlah: number,
+  operatorId: number,
+) => {
+  try {
+    const tanggal = new Date().toISOString().split("T")[0];
+    const result = db.runSync(
+      `INSERT INTO operasional (
+        keterangan,
+        jumlah,
+        operator_id,
+        tanggal
+      ) VALUES (?, ?, ?, ?)`,
+      [keterangan, jumlah, operatorId, tanggal],
+    );
+
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error("createOperasional error:", error);
+    throw error;
+  }
+};
+
+export const getOperasionalByTanggal = (tanggal: string) => {
+  try {
+    return db.getAllSync(
+      `SELECT *
+       FROM operasional
+       WHERE tanggal = ?
+       ORDER BY id DESC`,
+      [tanggal],
+    );
+  } catch (error) {
+    console.error("getOperasionalByTanggal error:", error);
+    return [];
+  }
+};
+
+export const getTotalOperasionalByTanggal = (tanggal: string): number => {
+  try {
+    const result = db.getFirstSync<{
+      total: number;
+    }>(
+      `SELECT COALESCE(SUM(jumlah), 0) as total
+       FROM operasional
+       WHERE tanggal = ?`,
+      [tanggal],
+    );
+
+    return result?.total ?? 0;
+  } catch (error) {
+    console.error("getTotalOperasionalByTanggal error:", error);
+    return 0;
+  }
+};
+
+// ============================================================
+// REKAP HARIAN
+// ============================================================
+
+export const createRekapHarian = (params: CreateRekapHarianParams) => {
+  try {
+    const existing = db.getFirstSync<{
+      id: number;
+    }>(
+      `SELECT id
+       FROM rekap_harian
+       WHERE created_at = ?`,
+      [],
+    );
+
+    if (existing) {
+      throw new Error("Rekap harian sudah dikunci");
+    }
+
+    const now = new Date().toISOString();
+
+    const result = db.runSync(
+      `INSERT INTO rekap_harian (
+        tanggal,
+        omzet,
+        hpp,
+        laba_kotor,
+        operasional,
+        kerugian,
+        laba_bersih,
+        locked,
+        created_by,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        params.omzet,
+        params.hpp,
+        params.labaKotor,
+        params.operasional,
+        params.kerugian,
+        params.labaBersih,
+        1,
+        params.createdBy,
+        now,
+      ],
+    );
+
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error("createRekapHarian error:", error);
+    throw error;
+  }
+};
+
+export const getRekapHarianByTanggal = (tanggal: string) => {
+  try {
+    return db.getFirstSync(
+      `SELECT *
+       FROM rekap_harian
+       WHERE tanggal = ?`,
+      [tanggal],
+    );
+  } catch (error) {
+    console.error("getRekapHarianByTanggal error:", error);
+    return null;
+  }
+};
+
+export const isRekapLocked = (tanggal: string): boolean => {
+  try {
+    const result = db.getFirstSync<{
+      locked: number;
+    }>(
+      `SELECT locked
+       FROM rekap_harian
+       WHERE tanggal = ?
+       LIMIT 1`,
+      [tanggal],
+    );
+
+    return result?.locked === 1;
+  } catch (error) {
+    console.error("isRekapLocked error:", error);
+    return false;
+  }
+};
+
+export const getAllRekapHarian = () => {
+  try {
+    return db.getAllSync(
+      `SELECT *
+       FROM rekap_harian
+       ORDER BY tanggal DESC`,
+    );
+  } catch (error) {
+    console.error("getAllRekapHarian error:", error);
+    return [];
+  }
+};
+
+export function getRekapKasHarian(tanggal: string) {
+  return db.getAllSync<RekapKas>("SELECT * FROM RekapKas WHERE tanggal = ?", [
+    tanggal,
+  ]);
+}
+
+export function createRekapKas(
+  nama: string,
+  kas_id: number | null,
+  jumlah: number,
+  operator_id: number,
+): number {
+  const tanggal = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
+  const result = db.runSync(
+    "INSERT INTO RekapKas (nama, kas_id, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?)",
+    [nama, kas_id, jumlah, tanggal, operator_id],
+  );
+  return result.lastInsertRowId;
 }
 
 export function insertTestData() {

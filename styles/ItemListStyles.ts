@@ -1,123 +1,130 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from "react-native";
 
-// ============================================================
 // DESIGN TOKENS — ITEM LIST SCREEN
-// ============================================================
 
 export const lightColors = {
   // Page / header bg
-  pageBg: '#eef3e5',
-  headerBg: '#eef3e5',
+  pageBg: "#eef3e5",
+  headerBg: "#eef3e5",
 
   // Title
-  titleText: '#111b0f',
+  titleText: "#111b0f",
 
   // "+ Tambah" pill button
-  addBtnBg: '#2e5c27',
-  addBtnText: '#ffffff',
+  addBtnBg: "#2e5c27",
+  addBtnText: "#ffffff",
 
   // Search bar
-  searchBg: '#ffffff',
-  searchBorder: '#e0e8d6',
-  searchIcon: '#9aaa8c',
-  searchPlaceholder: '#9aaa8c',
-  searchText: '#111b0f',
+  searchBg: "#ffffff",
+  searchBorder: "#e0e8d6",
+  searchIcon: "#9aaa8c",
+  searchPlaceholder: "#9aaa8c",
+  searchText: "#111b0f",
 
   // Filter chips
-  chipActiveBg: '#ffffff',
-  chipActiveBorder: '#2e5c27',
-  chipActiveText: '#2e5c27',
-  chipDefaultBg: '#ffffff',
-  chipDefaultBorder: '#dce5d2',
+  chipActiveBg: "#ffffff",
+  chipActiveBorder: "#2e5c27",
+  chipActiveText: "#2e5c27",
+  chipDefaultBg: "#ffffff",
+  chipDefaultBorder: "#dce5d2",
+  chipDefaultText: "#6b7c61",
 
   // Meta count "12 item terdaftar"
-  metaText: '#7a8c6e',
+  metaText: "#7a8c6e",
 
   // Card surface
-  cardBg: '#ffffff',
-  cardBorder: '#edf3e6',
-  cardShadowColor: '#1a2a16',
+  cardBg: "#ffffff",
+  cardBorder: "#edf3e6",
+  cardShadowColor: "#1a2a16",
 
   // Card typography
-  cardTitleText: '#111b0f',
-  cardSubText: '#9aaa8c',
-  cardDescText: '#9aaa8c',
+  cardTitleText: "#111b0f",
+  cardSubText: "#9aaa8c",
+  cardDescText: "#9aaa8c",
 
   // Price column
-  priceText: '#111b0f',
-  priceDot: '#4caf50',
-  modalText: '#9aaa8c',
-  profitText: '#2e7d32',
+  priceText: "#111b0f",
+  priceDot: "#4caf50",
+  modalText: "#9aaa8c",
+  profitText: "#2e7d32",
 
   // Stock
-  stockWarningText: '#c62828',
-  stockNormalText: '#6b7c61',
-  stockBtnBorder: '#c8d4be',
-  stockBtnText: '#6b7c61',
-  stockBtnBg: '#ffffff',
+  stockWarningText: "#c62828",
+  stockNormalText: "#6b7c61",
+  stockBtnBorder: "#c8d4be",
+  stockBtnText: "#6b7c61",
+  stockBtnBg: "#ffffff",
 
   // Category badge tints
-  badgeFisikBg: '#fde8d4',     badgeFisikText: '#c04800',
-  badgeVoucherBg: '#fdf5dc',   badgeVoucherText: '#a06800',
-  badgeDigitalBg: '#e4ede0',   badgeDigitalText: '#2d6224',
-  badgeTransferBg: '#ece8fc',  badgeTransferText: '#5236b4',
+  badgeFisikBg: "#fde8d4",
+  badgeFisikText: "#c04800",
+  badgeVoucherBg: "#fdf5dc",
+  badgeVoucherText: "#a06800",
+  badgeDigitalBg: "#e4ede0",
+  badgeDigitalText: "#2d6224",
+  badgeTransferBg: "#ece8fc",
+  badgeTransferText: "#5236b4",
 };
 
-export const darkColors: typeof lightColors = {
-  pageBg: '#0c1a0b',
-  headerBg: '#0c1a0b',
+export const darkColors = {
+  pageBg: "#0c1a0b",
+  headerBg: "#0c1a0b",
 
-  titleText: '#e0eeda',
+  titleText: "#e0eeda",
 
-  addBtnBg: '#3ecb38',
-  addBtnText: '#0c1a0b',
+  addBtnBg: "#3ecb38",
+  addBtnText: "#0c1a0b",
 
-  searchBg: '#162014',
-  searchBorder: '#1e3020',
-  searchIcon: '#3e5c3a',
-  searchPlaceholder: '#3e5c3a',
-  searchText: '#c8dec2',
+  searchBg: "#162014",
+  searchBorder: "#1e3020",
+  searchIcon: "#3e5c3a",
+  searchPlaceholder: "#3e5c3a",
+  searchText: "#c8dec2",
 
-  chipActiveBg: '#1a2e18',
-  chipActiveBorder: '#3ecb38',
-  chipActiveText: '#3ecb38',
-  chipDefaultBg: '#162014',
-  chipDefaultBorder: '#1e3020',
+  chipActiveBg: "#1a2e18",
+  chipActiveBorder: "#3ecb38",
+  chipActiveText: "#3ecb38",
+  chipDefaultBg: "#162014",
+  chipDefaultBorder: "#1e3020",
+  chipDefaultText: "#8aaa82",
 
-  metaText: '#3e5c3a',
+  metaText: "#3e5c3a",
 
-  cardBg: '#162014',
-  cardBorder: '#1e2e1c',
-  cardShadowColor: '#000000',
+  cardBg: "#162014",
+  cardBorder: "#1e2e1c",
+  cardShadowColor: "#000000",
 
-  cardTitleText: '#e0eeda',
-  cardSubText: '#4a6044',
-  cardDescText: '#4a6044',
+  cardTitleText: "#e0eeda",
+  cardSubText: "#4a6044",
+  cardDescText: "#4a6044",
 
-  priceText: '#e0eeda',
-  priceDot: '#4caf50',
-  modalText: '#4a6044',
-  profitText: '#4caf50',
+  priceText: "#e0eeda",
+  priceDot: "#4caf50",
+  modalText: "#4a6044",
+  profitText: "#4caf50",
 
-  stockWarningText: '#f44336',
-  stockNormalText: '#8aaa82',
-  stockBtnBorder: '#243622',
-  stockBtnText: '#8aaa82',
-  stockBtnBg: '#1a2a18',
+  stockWarningText: "#f44336",
+  stockNormalText: "#8aaa82",
+  stockBtnBorder: "#243622",
+  stockBtnText: "#8aaa82",
+  stockBtnBg: "#1a2a18",
 
-  badgeFisikBg: '#3a1808',     badgeFisikText: '#f4956a',
-  badgeVoucherBg: '#3a2c08',   badgeVoucherText: '#f0c040',
-  badgeDigitalBg: '#122a10',   badgeDigitalText: '#5ecf56',
-  badgeTransferBg: '#1c1440',  badgeTransferText: '#a48ef4',
+  badgeFisikBg: "#3a1808",
+  badgeFisikText: "#f4956a",
+  badgeVoucherBg: "#3a2c08",
+  badgeVoucherText: "#f0c040",
+  badgeDigitalBg: "#122a10",
+  badgeDigitalText: "#5ecf56",
+  badgeTransferBg: "#1c1440",
+  badgeTransferText: "#a48ef4",
 };
 
-// ============================================================
+// ======================================================
 // STYLE FACTORY
 // ============================================================
 export const createStyles = (c: typeof lightColors) =>
   StyleSheet.create({
-
-    // ── SCREEN ───────────────────────────────────────────
+    //? ITEM LIST ── SCREEN ───────────────────────────────────────────
     screen: {
       flex: 1,
       backgroundColor: c.pageBg,
@@ -126,11 +133,11 @@ export const createStyles = (c: typeof lightColors) =>
       flex: 1,
     },
 
-    // ── HEADER ROW ───────────────────────────────────────
+    //? ITEM LIST ── HEADER ROW ───────────────────────────────────────
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: 18,
       paddingTop: 16,
       paddingBottom: 12,
@@ -138,13 +145,13 @@ export const createStyles = (c: typeof lightColors) =>
     },
     headerTitle: {
       fontSize: 30,
-      fontWeight: '700',
+      fontWeight: "700",
       color: c.titleText,
       letterSpacing: -0.5,
     },
     addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: c.addBtnBg,
       paddingHorizontal: 16,
       paddingVertical: 9,
@@ -153,52 +160,115 @@ export const createStyles = (c: typeof lightColors) =>
     },
     addButtonPlus: {
       fontSize: 15,
-      fontWeight: '400',
+      fontWeight: "400",
       color: c.addBtnText,
     },
     addButtonText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: c.addBtnText,
       letterSpacing: 0.1,
     },
 
-    // ── SEARCH BAR ───────────────────────────────────────
-    searchWrapper: {
-      paddingHorizontal: 18,
-      paddingBottom: 10,
-      backgroundColor: c.headerBg,
-    },
-    searchBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: c.searchBg,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.searchBorder,
-      paddingHorizontal: 13,
-      height: 46,
-      gap: 8,
-    },
-    searchInput: {
+    //? ADD ITEM FORM ── HEADER ───────────────────────────────────────
+    headerForm: {
       flex: 1,
+      backgroundColor: c.pageBg,
+      paddingHorizontal: 18,
+      paddingTop: 16,
+    },
+    headerFormText: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: c.titleText,
+      marginBottom: 20,
+    },
+    headerFormSubtext: {
       fontSize: 14,
-      color: c.searchText,
-      padding: 0,
+      fontWeight: "bold",
+      color: c.titleText,
+      marginBottom: 12,
+      marginTop: 8,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: "bold",
+      color: c.titleText,
+      marginBottom: 12,
+      marginTop: 20,
     },
 
-    // ── FILTER CHIPS ─────────────────────────────────────
-    filterWrapper: {
-      paddingHorizontal: 18,
-      paddingBottom: 6,
-      backgroundColor: c.headerBg,
+    //? REUSABLE ── LABEL / INPUT ───────────────────────────────────────
+    fieldLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: c.cardTitleText,
+      marginBottom: 6,
     },
-    filterRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    inputBase: {
+      borderWidth: 1,
+      borderColor: c.searchBorder,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      marginBottom: 12,
+      backgroundColor: c.searchBg,
+      color: c.searchText,
+    },
+    inputMultiline: {
+      height: 80,
+      textAlignVertical: "top",
+    },
+    inputSmallHint: {
+      fontSize: 11,
+      color: c.profitText,
+      marginTop: 4,
+      fontWeight: "500",
+    },
+    helperText: {
+      fontSize: 12,
+      color: c.cardDescText,
+      marginBottom: 12,
+      fontStyle: "italic",
+    },
+
+    //? REUSABLE ── CHIP / TAG ───────────────────────────────────────
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
       gap: 8,
+      marginBottom: 12,
+    },
+    chipBase: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      alignItems: "center",
+      justifyContent: "center",
     },
     chipActive: {
+      borderColor: c.chipActiveBorder,
+      backgroundColor: c.chipActiveBg,
+    },
+    chipInactive: {
+      borderColor: c.chipDefaultBorder,
+      backgroundColor: c.chipDefaultBg,
+    },
+    chipTextActive: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: c.chipActiveText,
+    },
+    chipTextInactive: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: c.chipDefaultText,
+    },
+
+    // dipakai untuk filter bar
+    chipFilterActive: {
       paddingHorizontal: 14,
       paddingVertical: 7,
       borderRadius: 20,
@@ -206,11 +276,16 @@ export const createStyles = (c: typeof lightColors) =>
       borderWidth: 1.5,
       borderColor: c.chipActiveBorder,
     },
-    chipActiveText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: c.chipActiveText,
+    chipFilterInactive: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: c.chipDefaultBg,
+      borderWidth: 1.5,
+      borderColor: c.chipDefaultBorder,
     },
+
+    // dipakai kalau nanti kamu mau icon chip
     chipIcon: {
       width: 36,
       height: 36,
@@ -218,105 +293,177 @@ export const createStyles = (c: typeof lightColors) =>
       backgroundColor: c.chipDefaultBg,
       borderWidth: 1,
       borderColor: c.chipDefaultBorder,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     chipIconEmoji: {
       fontSize: 16,
     },
 
-    // ── META TEXT ────────────────────────────────────────
-    metaWrapper: {
-      paddingHorizontal: 18,
-      paddingTop: 8,
-      paddingBottom: 10,
-      backgroundColor: c.headerBg,
-    },
-    metaText: {
-      fontSize: 13,
-      fontWeight: '400',
-      color: c.metaText,
-    },
-
-    // ── SCROLLABLE LIST ──────────────────────────────────
-    listContent: {
-      paddingHorizontal: 18,
-      paddingTop: 2,
-      paddingBottom: 32,
+    //? REUSABLE -- BUTTON ───────────────────────────────────────
+    buttonRow: {
+      flexDirection: "row",
       gap: 10,
+      marginTop: 20,
+      marginBottom: 30,
+    },
+    buttonBase: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    secondaryButton: {
+      backgroundColor: c.chipDefaultBg,
+      borderWidth: 1,
+      borderColor: c.searchBorder,
+    },
+    primaryButton: {
+      backgroundColor: c.addBtnBg,
+    },
+    secondaryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: c.cardSubText,
+    },
+    primaryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: c.addBtnText,
     },
 
-    // ── ITEM CARD ────────────────────────────────────────
+    //? ADD ITEM FORM ── TWO COLUMN ───────────────────────────────────────
+    twoColumnRow: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 12,
+    },
+    twoColumnItem: {
+      flex: 1,
+    },
+
+    //? ADD ITEM FORM ── MARGIN PREVIEW ───────────────────────────────────────
+    previewCard: {
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 12,
+      borderLeftWidth: 4,
+    },
+    previewRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    previewLabel: {
+      fontSize: 12,
+      color: c.cardDescText,
+    },
+    previewValue: {
+      fontSize: 12,
+      fontWeight: "bold",
+      color: c.profitText,
+    },
+
+    //? ADD ITEM FORM ── CATEGORY REVIEW ───────────────────────────────────────
+    categoryInfoText: {
+      fontSize: 12,
+      color: c.cardDescText,
+      marginBottom: 12,
+      fontStyle: "italic",
+    },
+
+    //? STOCK MODAL -- SHEET ───────────────────────────────────────
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
+    },
+    modalSheet: {
+      backgroundColor: c.cardBg,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      padding: 20,
+      paddingBottom: 30,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: c.cardTitleText,
+      marginBottom: 16,
+    },
+
+    //? STOCK MODAL — INFO BOX
+
+    infoBox: {
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 16,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderLeftWidth: 4,
+    },
+    infoBoxLabel: {
+      fontSize: 12,
+      color: c.cardDescText,
+    },
+    infoBoxValue: {
+      fontSize: 16,
+      fontWeight: "bold",
+      color: c.profitText,
+    },
+
+    //? ITEM CARD — LIST ITEM
     card: {
       backgroundColor: c.cardBg,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: c.cardBorder,
       padding: 14,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       shadowColor: c.cardShadowColor,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.06,
       shadowRadius: 4,
       elevation: 1,
     },
-
-    // Left column
     cardLeft: {
       flex: 1,
       marginRight: 10,
       gap: 2,
     },
-    categoryBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      alignSelf: 'flex-start',
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      gap: 4,
-      marginBottom: 5,
-    },
-    categoryEmoji: {
-      fontSize: 12,
-    },
-    categoryText: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    cardSub: {
-      fontSize: 12,
-      color: c.cardSubText,
-      fontWeight: '400',
+    cardRight: {
+      alignItems: "flex-end",
+      justifyContent: "flex-start",
+      gap: 3,
     },
     cardTitle: {
       fontSize: 17,
-      fontWeight: '700',
+      fontWeight: "700",
       color: c.cardTitleText,
       letterSpacing: -0.3,
       marginTop: 2,
     },
+    cardSub: {
+      fontSize: 12,
+      color: c.cardSubText,
+      fontWeight: "400",
+    },
     cardDesc: {
       fontSize: 12,
       color: c.cardDescText,
-      fontWeight: '400',
+      fontWeight: "400",
       marginTop: 1,
     },
 
-    // Right column
-    cardRight: {
-      alignItems: 'flex-end',
-      justifyContent: 'flex-start',
-      gap: 3,
-    },
     priceRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
+      flexDirection: "row",
+      alignItems: "flex-start",
     },
     priceText: {
       fontSize: 18,
-      fontWeight: '700',
+      fontWeight: "700",
       color: c.priceText,
       letterSpacing: -0.3,
     },
@@ -331,27 +478,27 @@ export const createStyles = (c: typeof lightColors) =>
     modalText: {
       fontSize: 12,
       color: c.modalText,
-      fontWeight: '400',
+      fontWeight: "400",
     },
     profitText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: "600",
       color: c.profitText,
     },
     stockWarningRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 3,
       marginTop: 2,
     },
     stockWarningText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: "600",
       color: c.stockWarningText,
     },
     stockNormalText: {
       fontSize: 12,
-      fontWeight: '500',
+      fontWeight: "500",
       color: c.stockNormalText,
       marginTop: 2,
     },
@@ -366,20 +513,90 @@ export const createStyles = (c: typeof lightColors) =>
     },
     stockButtonText: {
       fontSize: 11,
-      fontWeight: '500',
+      fontWeight: "500",
       color: c.stockBtnText,
     },
 
+    //? ITEM LIST — SEARCH / FILTER / META / EMPTY
+
+    searchWrapper: {
+      paddingHorizontal: 18,
+      paddingBottom: 10,
+      backgroundColor: c.headerBg,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: c.searchBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.searchBorder,
+      paddingHorizontal: 13,
+      height: 46,
+      gap: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: c.searchText,
+      padding: 0,
+    },
+    filterWrapper: {
+      paddingHorizontal: 18,
+      paddingBottom: 15,
+      height: 36,
+      backgroundColor: c.headerBg,
+    },
+    filterRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      height: 36,
+    },
+    metaWrapper: {
+      paddingHorizontal: 18,
+      paddingTop: 8,
+      paddingBottom: 10,
+      backgroundColor: c.headerBg,
+    },
+    metaText: {
+      fontSize: 13,
+      fontWeight: "400",
+      color: c.metaText,
+    },
+    listContent: {
+      paddingHorizontal: 18,
+      justifyContent: "flex-start",
+      paddingTop: 2,
+      paddingBottom: 8,
+      gap: 10,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    emptyTitle: {
+      fontSize: 16,
+      color: c.cardSubText,
+      fontWeight: "600",
+    },
+    emptyDesc: {
+      fontSize: 12,
+      color: c.cardDescText,
+      marginTop: 4,
+    },
+
     // Category badge color pairs (bg + text combined per category)
-    badgeFisik:        { backgroundColor: c.badgeFisikBg },
-    badgeFisikLabel:   { color: c.badgeFisikText },
-    badgeVoucher:      { backgroundColor: c.badgeVoucherBg },
+    badgeFisik: { backgroundColor: c.badgeFisikBg },
+    badgeFisikLabel: { color: c.badgeFisikText },
+    badgeVoucher: { backgroundColor: c.badgeVoucherBg },
     badgeVoucherLabel: { color: c.badgeVoucherText },
-    badgeDigital:      { backgroundColor: c.badgeDigitalBg },
+    badgeDigital: { backgroundColor: c.badgeDigitalBg },
     badgeDigitalLabel: { color: c.badgeDigitalText },
-    badgeTransfer:     { backgroundColor: c.badgeTransferBg },
-    badgeTransferLabel:{ color: c.badgeTransferText },
+    badgeTransfer: { backgroundColor: c.badgeTransferBg },
+    badgeTransferLabel: { color: c.badgeTransferText },
   });
 
 export const lightStyles = createStyles(lightColors);
-export const darkStyles  = createStyles(darkColors);
+export const darkStyles = createStyles(darkColors);

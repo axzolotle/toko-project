@@ -7,6 +7,7 @@ import {
 } from "@/database/db2";
 import { createStok } from "@/service/Stok";
 import { useCurrentUser } from "@/service/useCurrentUser";
+import { useTheme } from "@/lib/ThemeContext";
 import { createStyles, darkColors, lightColors } from "@/styles/KasirStyles";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
@@ -17,7 +18,6 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    useColorScheme,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -98,9 +98,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ step, S }) => {
 
 export default function TransactionScreen() {
   const { userId } = useCurrentUser();
-  const scheme = useColorScheme();
-  const isDark = scheme === "dark";
-  const C = isDark ? darkColors : lightColors;
+  const { isDark, colors: C } = useTheme();
   const S = isDark ? createStyles(darkColors) : createStyles(lightColors);
 
   // ── STATE MANAGEMENT ──
