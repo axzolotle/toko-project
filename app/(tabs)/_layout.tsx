@@ -11,13 +11,13 @@ export default function TabLayout() {
     <SafeAreaView style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: colors.btnPrimaryBg,
-          tabBarInactiveTintColor: colors.stepLabelText,
+          tabBarActiveTintColor: colors.navActive,
+          tabBarInactiveTintColor: colors.navInactive,
           tabBarStyle: {
             height: Platform.OS === "ios" ? 80 : 62,
             paddingBottom: Platform.OS === "ios" ? 20 : 8,
             borderTopWidth: 0.5,
-            borderTopColor: isDark ? colors.stepInactiveBorder : "#e2e8f0",
+            borderTopColor: isDark ? colors.navBorder : "#e2e8f0",
             backgroundColor: colors.pageBg,
           },
           tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },

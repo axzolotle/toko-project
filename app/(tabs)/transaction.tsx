@@ -32,17 +32,31 @@ interface HeaderProps {
   S: any;
 }
 
-const KasirHeader: React.FC<HeaderProps> = ({ subtitle, S }) => (
-  <View style={S.header}>
-    <View>
-      <Text style={S.headerTitle}>Kasir</Text>
-      <Text style={S.headerSubtitle}>{subtitle}</Text>
+const KasirHeader: React.FC<HeaderProps> = ({ subtitle, S }) => {
+  const [syncing, setSyncing] = useState<boolean>(false);
+
+  const sync = async () => {
+    setSyncing(true);
+    setSyncing(false);
+  };
+  return (
+    <View style={S.header}>
+      <View>
+        <Text style={S.headerTitle}>Kasir</Text>
+        <Text style={S.headerSubtitle}>{subtitle}</Text>
+      </View>
+      <TouchableOpacity
+        style={S.syncButton}
+        onPress={sync}
+        activeOpacity={0.8}
+        disabled={syncing}
+      >
+        <View style={S.syncDot} />
+        <Text style={S.syncText}>{syncing ? "Syncing..." : "Sync"}</Text>
+      </TouchableOpacity>
     </View>
-    <TouchableOpacity style={S.fabButton} activeOpacity={0.8}>
-      <Text style={S.fabText}>☀</Text>
-    </TouchableOpacity>
-  </View>
-);
+  );
+};
 
 interface StepIndicatorProps {
   step: 1 | 2 | 3;
@@ -96,7 +110,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ step, S }) => {
 // ============================================================
 
 export default function TransactionScreen() {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
   const { isDark, colors: C } = useTheme();
   const S = isDark ? createStyles(darkColors) : createStyles(lightColors);
 
@@ -164,6 +178,16 @@ export default function TransactionScreen() {
   };
 
   const handleConfirmTransaction = () => {
+    if (userLoading) {
+      Alert.alert("Mohon tunggu", "Data user sedang dimuat");
+      return;
+    }
+
+    if (userId === null) {
+      Alert.alert("Error", "User belum login");
+      return;
+    }
+
     if (!selectedItem) {
       Alert.alert("Error", "Pilih item terlebih dahulu");
       return;

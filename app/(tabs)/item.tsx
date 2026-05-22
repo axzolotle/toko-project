@@ -25,7 +25,7 @@ import {
   getAllItems,
   getJenisItems,
   getKategoriItems,
-  Item
+  Item,
 } from "../../database/db2";
 import { createStok } from "../../service/Stok";
 import { useCurrentUser } from "../../service/useCurrentUser";
@@ -110,7 +110,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
   const [nama, setNama] = useState("");
   const [jenisList, setJenisList] = useState<string[]>([]);
   const [jenis, setJenis] = useState("");
@@ -157,6 +157,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     kategori === "__custom__" ? kategoriCustom.trim() : kategori;
 
   const handleSimpan = () => {
+    if (userLoading) {
+      return Alert.alert("Mohon tunggu", "Data user sedang dimuat");
+    }
+    if (userId === null) return Alert.alert("Error", "User belum login");
     if (!nama.trim()) return Alert.alert("Error", "Nama item wajib diisi");
     if (!jenisAkhir) return Alert.alert("Error", "Jenis wajib dipilih");
     if (!kategoriAkhir) return Alert.alert("Error", "Kategori wajib diisi");
@@ -371,7 +375,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           />
 
           {/* ── HARGA & STOK ── */}
-          <Text style={S.fieldLabel}>Harga & Stok</Text>
+          <Text style={S.fieldLabel}>Harga</Text>
 
           <View style={S.twoColumnRow}>
             {/* Harga Modal */}
@@ -465,7 +469,7 @@ const StockModal: React.FC<StockModalProps> = ({
   onSuccess,
   allItems,
 }) => {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
   const [addQuantityInput, setAddQuantityInput] = useState("");
   const [hargaBeliStok, setHargaBeliStok] = useState("");
 
@@ -474,6 +478,14 @@ const StockModal: React.FC<StockModalProps> = ({
   const C = isDark ? darkColors : lightColors;
 
   const handleAddQuantity = () => {
+    if (userLoading) {
+      return Alert.alert("Mohon tunggu", "Data user sedang dimuat");
+    }
+
+    if (userId === null) {
+      return Alert.alert("Error", "User belum login");
+    }
+
     if (!addQuantityInput.trim()) {
       return Alert.alert("Error", "Masukkan jumlah quantity");
     }
@@ -592,7 +604,6 @@ const StockModal: React.FC<StockModalProps> = ({
 // MAIN SCREEN COMPONENT
 // ============================================================
 export default function BarangScreen() {
-  const { userId } = useCurrentUser();
   const [items, setItems] = useState<Item[]>([]);
   const [jenisList, setJenisList] = useState<string[]>([]);
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);

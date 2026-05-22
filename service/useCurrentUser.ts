@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { getUserById } from "@/database/db2";
 import type { User } from "@/database/db2";
 
-const CURRENT_USER_KEY = "@toko_current_user_id";
+export const CURRENT_USER_KEY = "@toko_current_user_id";
 
 /**
  * Custom hook untuk akses current user id dari storage
@@ -23,11 +23,22 @@ export function useCurrentUser() {
       const storedId = await AsyncStorage.getItem(CURRENT_USER_KEY);
       if (storedId) {
         const id = parseInt(storedId, 10);
+        if (Number.isNaN(id)) {
+          await AsyncStorage.removeItem(CURRENT_USER_KEY);
+          setUserId(null);
+          setUser(null);
+          return;
+        }
+
         setUserId(id);
         // Load user details from database
         const userData = getUserById(id);
         if (userData) {
           setUser(userData);
+        } else {
+          await AsyncStorage.removeItem(CURRENT_USER_KEY);
+          setUserId(null);
+          setUser(null);
         }
       }
     } catch (error) {
@@ -40,10 +51,14 @@ export function useCurrentUser() {
   const setCurrentUser = async (id: number) => {
     try {
       await AsyncStorage.setItem(CURRENT_USER_KEY, id.toString());
-      setUserId(id);
       const userData = getUserById(id);
       if (userData) {
+        setUserId(id);
         setUser(userData);
+      } else {
+        await AsyncStorage.removeItem(CURRENT_USER_KEY);
+        setUserId(null);
+        setUser(null);
       }
     } catch (error) {
       console.error("Error setting current user:", error);
@@ -61,7 +76,7 @@ export function useCurrentUser() {
   };
 
   return {
-    userId: userId || 3, // Default ke 3 jika belum set
+    userId,
     user,
     loading,
     setCurrentUser,

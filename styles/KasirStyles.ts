@@ -13,6 +13,12 @@ export const lightColors = {
   titleText: "#111b0f",
   subtitleText: "#5c7a50",
 
+  // sync
+  syncBtnBg: "#ffffff",
+  syncBtnBorder: "#d4dece",
+  syncDot: "#4caf50",
+  syncText: "#111b0f",
+
   // FAB asterisk button
   fabBg: "#e0e8d8",
   fabText: "#3d5c35",
@@ -88,6 +94,12 @@ export const darkColors = {
   // Header text
   titleText: "#e0eeda",
   subtitleText: "#5a8a50",
+
+  //sync
+  syncBtnBg: "#162014",
+  syncBtnBorder: "#1e3020",
+  syncDot: "#4caf50",
+  syncText: "#e0eeda",
 
   // FAB asterisk button
   fabBg: "#1a2e18",
@@ -192,6 +204,29 @@ export const createStyles = (c: typeof lightColors) =>
       fontWeight: "400",
       color: c.subtitleText,
       marginTop: 2,
+    },
+
+    syncButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: c.syncBtnBg,
+      borderWidth: 1,
+      borderColor: c.syncBtnBorder,
+    },
+    syncDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: c.syncDot,
+    },
+    syncText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: c.syncText,
     },
     fabButton: {
       width: 42,

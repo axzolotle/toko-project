@@ -670,7 +670,7 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
   const [nama, setNama] = useState("");
   const [kasId, setKasId] = useState("");
   const [jumlah, setJumlah] = useState("");
@@ -680,6 +680,14 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
   const C = isDark ? darkColors : lightColors;
 
   const handleSimpan = () => {
+    if (userLoading) {
+      alert("Data user sedang dimuat");
+      return;
+    }
+    if (userId === null) {
+      alert("User belum login");
+      return;
+    }
     if (!nama.trim()) {
       alert("Nama wajib diisi");
       return;
@@ -790,7 +798,7 @@ export const ModalKerugian: React.FC<BaseModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
 
   const [keterangan, setKeterangan] = useState("");
   const [jumlah, setJumlah] = useState("");
@@ -805,6 +813,14 @@ export const ModalKerugian: React.FC<BaseModalProps> = ({
   };
 
   const handleSubmit = () => {
+    if (userLoading) {
+      alert("Data user sedang dimuat");
+      return;
+    }
+    if (userId === null) {
+      alert("User belum login");
+      return;
+    }
     if (!jumlah.trim()) {
       alert("Jumlah wajib diisi");
       return;
@@ -878,7 +894,7 @@ export const ModalOperasional: React.FC<BaseModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
 
   const [keterangan, setKeterangan] = useState("");
   const [jumlah, setJumlah] = useState("");
@@ -893,6 +909,14 @@ export const ModalOperasional: React.FC<BaseModalProps> = ({
   };
 
   const handleSubmit = () => {
+    if (userLoading) {
+      alert("Data user sedang dimuat");
+      return;
+    }
+    if (userId === null) {
+      alert("User belum login");
+      return;
+    }
     if (!jumlah.trim()) {
       alert("Jumlah wajib diisi");
       return;
@@ -967,12 +991,21 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
 
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
 
   const handleLock = () => {
+    if (userLoading) {
+      alert("Data user sedang dimuat");
+      return;
+    }
+    if (userId === null) {
+      alert("User belum login");
+      return;
+    }
+
     try {
       createRekapHarian({
         omzet: data.omzet,

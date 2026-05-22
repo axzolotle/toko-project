@@ -14,7 +14,7 @@ import {
 
 export default function TestScreen() {
   const router = useRouter();
-  const { userId } = useCurrentUser();
+  const { userId, loading: userLoading } = useCurrentUser();
   // Kas form state
   const [kasNama, setKasNama] = useState("");
   const [kasJenis, setKasJenis] = useState("");
@@ -26,6 +26,16 @@ export default function TestScreen() {
   };
 
   const handleCreateKas = () => {
+    if (userLoading) {
+      Alert.alert("Mohon tunggu", "Data user sedang dimuat");
+      return;
+    }
+
+    if (userId === null) {
+      Alert.alert("Error", "User belum login");
+      return;
+    }
+
     if (!kasNama || !kasJenis || !kasJumlah) {
       Alert.alert("Error", "Nama, Jenis, dan Jumlah harus diisi!");
       return;

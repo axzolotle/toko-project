@@ -409,10 +409,10 @@ export async function syncAllTables() {
   };
 
   const totalSynced = results.users.synced ?? 0;
-  // (results.items.synced ?? 0) +
-  // (results.transaksi.synced ?? 0) +
-  // (results.kas.synced ?? 0) +
-  // (results.stok.synced ?? 0);
+  (results.items.synced ?? 0) +
+    (results.transaksi.synced ?? 0) +
+    (results.kas.synced ?? 0) +
+    (results.stok.synced ?? 0);
 
   console.log("\n✅ ===== FULL SYNC COMPLETED =====");
   console.log("Total synced:", totalSynced);

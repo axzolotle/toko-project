@@ -5,8 +5,8 @@ import {
   lightColors,
   lightStyles,
 } from "@/styles/LoginStyles";
+import { useTheme } from "@/lib/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -16,7 +16,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -36,7 +35,7 @@ export default function LoginScreen() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState("");
 
-  const isDark = useTheme();
+  const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
 
@@ -110,9 +109,7 @@ export default function LoginScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar
-        barStyle={
-          useColorScheme() === "dark" ? "light-content" : "dark-content"
-        }
+        barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={C.pageBg}
       />
       <View style={S.screen}>

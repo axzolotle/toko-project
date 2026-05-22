@@ -1,7 +1,7 @@
 import { getUserById } from "@/database/db2";
 import { syncAllTables } from "@/database/sync";
 import { useTheme } from "@/lib/ThemeContext";
-import { useCurrentUser } from "@/service/useCurrentUser";
+import { CURRENT_USER_KEY, useCurrentUser } from "@/service/useCurrentUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -117,10 +117,7 @@ const db_keluar = async (): Promise<void> => {
   try {
     // Clear semua session data
     await AsyncStorage.multiRemove([
-      "auth_token",
-      "current_user_id",
-      "app_settings",
-      "user_data",
+      CURRENT_USER_KEY,
     ]);
 
     console.log("Session cleared, navigating to login");
@@ -162,6 +159,18 @@ const useAkun = () => {
   const { toggleTheme } = useTheme();
 
   const muat = useCallback(async () => {
+    if (currentUser.loading) {
+      return;
+    }
+
+    if (currentUser.userId === null) {
+      setUser(null);
+      setSettings(await db_getAppSettings());
+      setLoading(false);
+      router.replace("/login");
+      return;
+    }
+
     setLoading(true);
     try {
       // Sekarang pass userId ke db function
@@ -176,7 +185,7 @@ const useAkun = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser.userId]);
+  }, [currentUser.loading, currentUser.userId]);
 
   useEffect(() => {
     muat();

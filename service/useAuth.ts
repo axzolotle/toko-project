@@ -1,12 +1,12 @@
 import {
-    authenticateUser,
-    checkUsernameExists,
-    createUser,
+  authenticateUser,
+  checkUsernameExists,
+  createUser,
+  getUserById,
 } from "@/database/db2";
+import { CURRENT_USER_KEY } from "@/service/useCurrentUser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useState } from "react";
-
-const CURRENT_USER_KEY = "@toko_current_user_id";
 
 export function useAuth() {
   const [loading, setLoading] = useState(false);
@@ -78,6 +78,8 @@ export function useAuth() {
         await AsyncStorage.setItem(CURRENT_USER_KEY, userId.toString());
 
         setLoading(false);
+        const users = getUserById(userId);
+        console.log("user berhasil tambah :", users);
         return { success: true, userId };
       } catch (err) {
         const errorMsg =
