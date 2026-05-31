@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  darkColors,
-  darkStyles,
-  lightColors,
-  lightStyles,
-} from "@/styles/AkunStyles";
+  AkunDarkColors as darkColors,
+  AkunDarkStyles as darkStyles,
+  AkunLightColors as lightColors,
+  AkunLightStyles as lightStyles,
+} from "@/styles/AppStyle";
 
 // ============================================================
 //  TYPES

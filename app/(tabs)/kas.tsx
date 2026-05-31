@@ -3,18 +3,29 @@ import {
   createOperasional,
   createRekapHarian,
   createRekapKas,
+  db_getHistori as getHistoriFromDb,
+  getPilihanKas,
+  getRekapHarianByTanggal,
+  getStokMasukByTanggal,
+  getTotalKerugianByTanggal,
+  getTotalOperasionalByTanggal,
   getTransaksiHarian,
   HistoriGroup,
 } from "@/database/db2";
 import { useTheme } from "@/lib/ThemeContext";
 import { useCurrentUser } from "@/service/useCurrentUser";
 import {
-  darkColors,
-  darkStyles,
-  lightColors,
-  lightStyles,
-} from "@/styles/KasStyles";
+  KasDarkColors as darkColors,
+  KasDarkStyles as darkStyles,
+  KasLightColors as lightColors,
+  KasLightStyles as lightStyles,
+} from "@/styles/AppStyle";
+import {
+  formatCurrencyInput,
+  parseCurrencyInput,
+} from "@/utils/currencyInput";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -69,6 +80,16 @@ interface StokItem {
 
 const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
   try {
+    const lockedRekap = getRekapHarianByTanggal(tanggal) as {
+      locked: number;
+      omzet: number;
+      hpp: number;
+      laba_kotor: number;
+      operasional: number;
+      kerugian: number;
+      laba_bersih: number;
+    } | null;
+
     // Get all transaksi for the date
     const transaksi = getTransaksiHarian(tanggal);
 
@@ -84,9 +105,8 @@ const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
     // Calculate laba kotor
     const labaKotor = omzet - hpp;
 
-    // For now, set operasional and kerugian to 0 (can be expanded with kas table)
-    const operasional = 0;
-    const kerugian = 0;
+    const operasional = getTotalOperasionalByTanggal(tanggal);
+    const kerugian = getTotalKerugianByTanggal(tanggal);
 
     const labaBersih = labaKotor - operasional - kerugian;
 
@@ -99,17 +119,27 @@ const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
       laba: t.laba,
     }));
 
+    const penambahanStok: StokItem[] = getStokMasukByTanggal(tanggal).map(
+      (s) => ({
+        id: s.id,
+        nama: s.item_nama ?? `Item #${s.item_id}`,
+        qty: s.quantity,
+        hargaJual: s.harga_jual ?? 0,
+        totalBeli: s.harga_beli * s.quantity,
+      }),
+    );
+
     return {
       tanggal,
-      dikunci: false,
-      omzet,
-      hpp,
-      labaKotor,
-      operasional,
-      kerugian,
-      labaBersih,
+      dikunci: lockedRekap?.locked === 1,
+      omzet: lockedRekap?.omzet ?? omzet,
+      hpp: lockedRekap?.hpp ?? hpp,
+      labaKotor: lockedRekap?.laba_kotor ?? labaKotor,
+      operasional: lockedRekap?.operasional ?? operasional,
+      kerugian: lockedRekap?.kerugian ?? kerugian,
+      labaBersih: lockedRekap?.laba_bersih ?? labaBersih,
       penjualan,
-      penambahanStok: [], // TODO: Implement from stok table when ready
+      penambahanStok,
     };
   } catch (error) {
     console.error("Error getting rekap harian:", error);
@@ -129,9 +159,7 @@ const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
 };
 
 const db_getHistori = async (): Promise<HistoriGroup[]> => {
-  // TODO: Query kas table when ready
-  // For now, return empty
-  return [];
+  return getHistoriFromDb();
 };
 
 // ============================================================
@@ -226,7 +254,7 @@ const useRekapHarian = () => {
   };
 };
 
-const useHistori = () => {
+const useHistori = (refreshToken = 0) => {
   const [groups, setGroups] = useState<HistoriGroup[]>([]);
   const [filter, setFilter] = useState<HistoriFilter>("semua");
   const [loading, setLoading] = useState(true);
@@ -244,7 +272,7 @@ const useHistori = () => {
 
   useEffect(() => {
     muat();
-  }, [muat]);
+  }, [muat, refreshToken]);
 
   return {
     groups: filterHistori(groups, filter),
@@ -260,12 +288,18 @@ const useHistori = () => {
 // ============================================================
 
 // ── TAB: REKAP HARIAN ────────────────────────────────────────
-const TabRekapHarian: React.FC<{ S: any; C: typeof lightColors }> = ({
+const TabRekapHarian: React.FC<{
+  S: any;
+  C: typeof lightColors;
+  onShowHistori: () => void;
+}> = ({
   S,
   C,
+  onShowHistori,
 }) => {
   const [showModal, setShowModal] = useState<ModalType>(null);
-  const { tanggal, data, loading, prevHari, nextHari } = useRekapHarian();
+  const { tanggal, data, loading, prevHari, nextHari, refresh } =
+    useRekapHarian();
 
   const openModal = (type: ModalType) => {
     setShowModal(type);
@@ -354,7 +388,7 @@ const TabRekapHarian: React.FC<{ S: any; C: typeof lightColors }> = ({
             {/* Penjualan Hari Ini */}
             <View style={S.pjSectionHeader}>
               <Text style={S.pjSectionLabel}>Penjualan Hari Ini</Text>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity onPress={onShowHistori} activeOpacity={0.7}>
                 <Text style={S.pjLihatSemua}>lihat semua</Text>
               </TouchableOpacity>
             </View>
@@ -408,11 +442,16 @@ const TabRekapHarian: React.FC<{ S: any; C: typeof lightColors }> = ({
 
             {/* Action Buttons */}
             <TouchableOpacity
-              style={S.btnKunci}
+              style={[S.btnKunci, data.dikunci && S.btnDisabled]}
               activeOpacity={0.85}
+              disabled={data.dikunci}
               onPress={() => openModal("lock-rekap")}
             >
-              <Text style={S.btnKunciText}>🔒 Kunci &amp; Simpan Rekap</Text>
+              <Text style={S.btnKunciText}>
+                {data.dikunci
+                  ? "🔒 Rekap Sudah Dikunci"
+                  : "🔒 Kunci & Simpan Rekap"}
+              </Text>
             </TouchableOpacity>
             <View style={S.actionGrid}>
               <TouchableOpacity
@@ -438,6 +477,7 @@ const TabRekapHarian: React.FC<{ S: any; C: typeof lightColors }> = ({
         onClose={closeModal}
         onSuccess={() => {
           closeModal();
+          refresh();
         }}
       />
 
@@ -446,6 +486,7 @@ const TabRekapHarian: React.FC<{ S: any; C: typeof lightColors }> = ({
         onClose={closeModal}
         onSuccess={() => {
           closeModal();
+          refresh();
         }}
       />
       {data && (
@@ -455,6 +496,7 @@ const TabRekapHarian: React.FC<{ S: any; C: typeof lightColors }> = ({
           onClose={closeModal}
           onSuccess={() => {
             closeModal();
+            refresh();
           }}
         />
       )}
@@ -487,8 +529,12 @@ const getHistoriIcon = (jenis: HistoriJenis) => {
   }
 };
 
-const TabHistori: React.FC<{ S: any; C: typeof lightColors }> = ({ S, C }) => {
-  const { groups, filter, setFilter, loading } = useHistori();
+const TabHistori: React.FC<{
+  S: any;
+  C: typeof lightColors;
+  refreshToken: number;
+}> = ({ S, C, refreshToken }) => {
+  const { groups, filter, setFilter, loading } = useHistori(refreshToken);
 
   if (loading) {
     return (
@@ -671,13 +717,28 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
   onSuccess,
 }) => {
   const { userId, loading: userLoading } = useCurrentUser();
-  const [nama, setNama] = useState("");
-  const [kasId, setKasId] = useState("");
+  const [kasOptions, setKasOptions] = useState<
+    Array<{ id: number; nama: string; jenis: string }>
+  >([]);
+  const [selectedKas, setSelectedKas] = useState<{
+    id: number;
+    nama: string;
+    jenis: string;
+  } | null>(null);
   const [jumlah, setJumlah] = useState("");
 
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const options = getPilihanKas();
+    setKasOptions(options);
+    setSelectedKas((current) => current ?? options[0] ?? null);
+  }, [visible]);
 
   const handleSimpan = () => {
     if (userLoading) {
@@ -688,22 +749,19 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
       alert("User belum login");
       return;
     }
-    if (!nama.trim()) {
-      alert("Nama wajib diisi");
+    if (!selectedKas) {
+      alert("Pilih kas terlebih dahulu");
       return;
     }
-    if (!jumlah.trim() || isNaN(parseFloat(jumlah))) {
+    const jumlahValue = parseCurrencyInput(jumlah);
+
+    if (!jumlah.trim() || Number.isNaN(jumlahValue)) {
       alert("Jumlah harus berupa angka");
       return;
     }
 
     try {
-      createRekapKas(
-        nama.trim(),
-        kasId.trim() ? parseInt(kasId) : null,
-        parseFloat(jumlah),
-        userId,
-      );
+      createRekapKas(selectedKas.nama, selectedKas.id, jumlahValue, userId);
       alert("Rekap kas berhasil dicatat");
       handleCancel();
       onSuccess();
@@ -714,8 +772,7 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
   };
 
   const handleCancel = () => {
-    setNama("");
-    setKasId("");
+    setSelectedKas(null);
     setJumlah("");
     onClose();
   };
@@ -723,37 +780,47 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={S.modalOverlay}>
-        <View style={S.modalSheet}>
+        <View
+          style={[S.modalSheet, { paddingBottom: Math.max(30, insets.bottom + 30) }]}
+        >
           <Text style={S.modalTitle}>Catat Rekap Kas</Text>
 
-          {/* Nama */}
-          <Text style={S.modalLabel}>Nama Bank</Text>
-          <TextInput
-            style={S.modalInput}
-            value={nama}
-            onChangeText={setNama}
-            placeholder="contoh: Catat uang hasil penjualan"
-            placeholderTextColor={C.subDesc}
-          />
-
-          {/* Kas ID (opsional) */}
-          <Text style={S.modalLabel}>Kas ID (opsional)</Text>
-          <TextInput
-            style={S.modalInput}
-            value={kasId}
-            onChangeText={setKasId}
-            placeholder="kosongkan jika tidak ada"
-            placeholderTextColor={C.subDesc}
-            keyboardType="numeric"
-          />
+          <Text style={S.modalLabel}>Pilih Kas</Text>
+          <View style={S.bankOptionRow}>
+            {kasOptions.map((kas) => {
+              const isActive = selectedKas?.id === kas.id;
+              return (
+                <TouchableOpacity
+                  key={kas.id}
+                  style={[S.bankOption, isActive && S.bankOptionActive]}
+                  onPress={() => setSelectedKas(kas)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      S.bankOptionText,
+                      isActive && S.bankOptionActiveText,
+                    ]}
+                  >
+                    {kas.nama}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {kasOptions.length === 0 ? (
+              <Text style={S.histEmptyInsideText}>
+                Belum ada kas. Tambahkan lewat Akun &gt; Kelola Kas.
+              </Text>
+            ) : null}
+          </View>
 
           {/* Jumlah */}
           <Text style={S.modalLabel}>Jumlah (Rp) *</Text>
           <TextInput
             style={S.modalInput}
             value={jumlah}
-            onChangeText={setJumlah}
-            placeholder="0"
+            onChangeText={(value) => setJumlah(formatCurrencyInput(value))}
+            placeholder="Rp 0"
             placeholderTextColor={C.subDesc}
             keyboardType="numeric"
           />
@@ -806,6 +873,7 @@ export const ModalKerugian: React.FC<BaseModalProps> = ({
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
+  const insets = useSafeAreaInsets();
 
   const reset = () => {
     setKeterangan("");
@@ -827,7 +895,7 @@ export const ModalKerugian: React.FC<BaseModalProps> = ({
     }
 
     try {
-      createKerugian(keterangan.trim(), parseFloat(jumlah), userId);
+      createKerugian(keterangan.trim(), parseCurrencyInput(jumlah), userId);
 
       alert("Kerugian berhasil dicatat");
 
@@ -843,7 +911,9 @@ export const ModalKerugian: React.FC<BaseModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={S.modalOverlay}>
-        <View style={S.modalSheet}>
+        <View
+          style={[S.modalSheet, { paddingBottom: Math.max(30, insets.bottom + 30) }]}
+        >
           <Text style={S.modalTitle}>Catat Kerugian</Text>
 
           <Text style={S.modalLabel}>Keterangan</Text>
@@ -861,9 +931,9 @@ export const ModalKerugian: React.FC<BaseModalProps> = ({
           <TextInput
             style={S.modalInput}
             value={jumlah}
-            onChangeText={setJumlah}
+            onChangeText={(value) => setJumlah(formatCurrencyInput(value))}
             keyboardType="numeric"
-            placeholder="0"
+            placeholder="Rp 0"
             placeholderTextColor={C.subDesc}
           />
 
@@ -902,6 +972,7 @@ export const ModalOperasional: React.FC<BaseModalProps> = ({
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
+  const insets = useSafeAreaInsets();
 
   const reset = () => {
     setKeterangan("");
@@ -923,7 +994,7 @@ export const ModalOperasional: React.FC<BaseModalProps> = ({
     }
 
     try {
-      createOperasional(keterangan.trim(), parseFloat(jumlah), userId);
+      createOperasional(keterangan.trim(), parseCurrencyInput(jumlah), userId);
 
       alert("Operasional berhasil dicatat");
 
@@ -939,7 +1010,9 @@ export const ModalOperasional: React.FC<BaseModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={S.modalOverlay}>
-        <View style={S.modalSheet}>
+        <View
+          style={[S.modalSheet, { paddingBottom: Math.max(30, insets.bottom + 30) }]}
+        >
           <Text style={S.modalTitle}>Catat Operasional</Text>
 
           <Text style={S.modalLabel}>Keterangan</Text>
@@ -957,9 +1030,9 @@ export const ModalOperasional: React.FC<BaseModalProps> = ({
           <TextInput
             style={S.modalInput}
             value={jumlah}
-            onChangeText={setJumlah}
+            onChangeText={(value) => setJumlah(formatCurrencyInput(value))}
             keyboardType="numeric"
-            placeholder="0"
+            placeholder="Rp 0"
             placeholderTextColor={C.subDesc}
           />
 
@@ -995,8 +1068,14 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
 
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
+  const insets = useSafeAreaInsets();
 
   const handleLock = () => {
+    if (data.dikunci) {
+      alert("Rekap harian ini sudah dikunci");
+      return;
+    }
+
     if (userLoading) {
       alert("Data user sedang dimuat");
       return;
@@ -1008,6 +1087,7 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
 
     try {
       createRekapHarian({
+        tanggal: data.tanggal,
         omzet: data.omzet,
         hpp: data.hpp,
         labaKotor: data.labaKotor,
@@ -1030,7 +1110,9 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={S.modalOverlay}>
-        <View style={S.modalSheet}>
+        <View
+          style={[S.modalSheet, { paddingBottom: Math.max(30, insets.bottom + 30) }]}
+        >
           <Text style={S.modalTitle}>Kunci Rekap Harian</Text>
 
           <Text style={S.lockDescription}>
@@ -1060,7 +1142,11 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
               <Text style={S.modalCancelText}>Batal</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={S.btnKunci} onPress={handleLock}>
+            <TouchableOpacity
+              style={[S.btnKunci, data.dikunci && S.btnDisabled]}
+              onPress={handleLock}
+              disabled={data.dikunci}
+            >
               <Text style={S.btnKunciText}>🔒 Kunci Rekap</Text>
             </TouchableOpacity>
           </View>
@@ -1070,10 +1156,16 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
   );
 };
 
-type ModalType = null | "rekap" | "kerugian" | "operasional" | "lock-rekap";
+type ModalType =
+  | null
+  | "rekap-kas"
+  | "kerugian"
+  | "operasional"
+  | "lock-rekap";
 
 const KeuanganScreen: React.FC = () => {
   const [showModal, setShowModal] = useState<ModalType>(null);
+  const [historiRefreshToken, setHistoriRefreshToken] = useState(0);
 
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
@@ -1091,6 +1183,7 @@ const KeuanganScreen: React.FC = () => {
 
   const handleRekapSuccess = () => {
     setShowModal(null);
+    setHistoriRefreshToken((token) => token + 1);
   };
 
   return (
@@ -1107,9 +1200,9 @@ const KeuanganScreen: React.FC = () => {
           <TouchableOpacity
             style={S.catatButton}
             activeOpacity={0.85}
-            onPress={() => openModal("rekap")}
+            onPress={() => openModal("rekap-kas")}
           >
-            <Text style={S.catatButtonText}>+ Catat</Text>
+            <Text style={S.catatButtonText}>+ Rekap Kas</Text>
           </TouchableOpacity>
         </View>
 
@@ -1138,12 +1231,20 @@ const KeuanganScreen: React.FC = () => {
         </View>
 
         {/* ── TAB CONTENT ── */}
-        {activeTab === "rekap" && <TabRekapHarian S={S} C={C} />}
-        {activeTab === "histori" && <TabHistori S={S} C={C} />}
+        {activeTab === "rekap" && (
+          <TabRekapHarian
+            S={S}
+            C={C}
+            onShowHistori={() => setActiveTab("histori")}
+          />
+        )}
+        {activeTab === "histori" && (
+          <TabHistori S={S} C={C} refreshToken={historiRefreshToken} />
+        )}
         {/* </SafeAreaView> */}
       </View>
       <CatatRekapKas
-        visible={showModal === "rekap"}
+        visible={showModal === "rekap-kas"}
         onClose={closeModal}
         onSuccess={handleRekapSuccess}
       />

@@ -3,6 +3,33 @@ import uuid from "react-native-uuid";
 
 export const db = SQLite.openDatabaseSync("konter.db");
 
+const ensureColumn = (table: string, column: string, definition: string) => {
+  const columns = db.getAllSync<{ name: string }>(`PRAGMA table_info(${table})`);
+  const exists = columns.some((col) => col.name === column);
+
+  if (!exists) {
+    db.execSync(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+};
+
+const ensureKasSchema = () => {
+  ensureColumn("kas", "item_id", "INTEGER");
+  ensureColumn("kas", "keterangan", "TEXT DEFAULT ''");
+  ensureColumn("kas", "jumlah", "REAL DEFAULT 0");
+  ensureColumn("kas", "tanggal", "TEXT");
+  ensureColumn("kas", "created_at", "TEXT");
+
+  const now = new Date().toISOString();
+  db.runSync(
+    "UPDATE kas SET tanggal = COALESCE(tanggal, created_at, ?) WHERE tanggal IS NULL OR TRIM(tanggal) = ''",
+    [now],
+  );
+  db.runSync(
+    "UPDATE kas SET created_at = COALESCE(created_at, tanggal, ?) WHERE created_at IS NULL OR TRIM(created_at) = ''",
+    [now],
+  );
+};
+
 export type User = {
   id: number;
   uuid: string | null;
@@ -49,10 +76,12 @@ export type Transaksi = {
 
 export type Stok = {
   id: number;
+  uuid: string | null;
   item_id: number;
   quantity: number;
   jenis: "masuk" | "keluar";
   keterangan: string;
+  harga_beli: number;
   tanggal: string;
   synced: number;
   operator_id: number;
@@ -61,11 +90,13 @@ export type Stok = {
 export type kas = {
   id: number;
   uuid: string | null;
+  item_id: number | null;
   nama: string;
   jenis: string;
   keterangan: string;
   jumlah: number;
   tanggal: string;
+  created_at: string;
   synced: number;
   operator_id: number;
 };
@@ -125,6 +156,7 @@ export type RekapKas = {
 };
 
 interface CreateRekapHarianParams {
+  tanggal: string;
   omzet: number;
   hpp: number;
   labaKotor: number;
@@ -209,16 +241,20 @@ export function initDB() {
     "CREATE TABLE IF NOT EXISTS kas (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
       "  uuid         TEXT UNIQUE," +
+      "  item_id      INTEGER," +
       "  nama         TEXT NOT NULL," +
       "  jenis        TEXT NOT NULL," +
       "  keterangan   TEXT DEFAULT ''," +
-      "  jumlah        REAL NOT NULL," +
-      "  tanggal       TEXT NOT NULL," +
+      "  jumlah        REAL DEFAULT 0," +
+      "  tanggal       TEXT," +
       "  operator_id   INTEGER NOT NULL," +
+      "  created_at     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP," +
       "  synced        INTEGER DEFAULT 0," +
+      "  FOREIGN KEY (item_id) REFERENCES items(id)," +
       "  FOREIGN KEY (operator_id) REFERENCES users(id)" +
       ")",
   );
+  ensureKasSchema();
   db.execSync(
     "CREATE TABLE IF NOT EXISTS RekapKas (" +
       "  id           INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -497,18 +533,51 @@ export const createRekapHarian = (params: CreateRekapHarianParams) => {
   try {
     const existing = db.getFirstSync<{
       id: number;
+      locked: number;
     }>(
-      `SELECT id
+      `SELECT id, locked
        FROM rekap_harian
-       WHERE created_at = ?`,
-      [],
+       WHERE tanggal = ?
+       ORDER BY locked DESC, id DESC
+       LIMIT 1`,
+      [params.tanggal],
     );
 
-    if (existing) {
+    if (existing?.locked === 1) {
       throw new Error("Rekap harian sudah dikunci");
     }
 
     const now = new Date().toISOString();
+
+    if (existing) {
+      db.runSync(
+        `UPDATE rekap_harian
+         SET omzet = ?,
+             hpp = ?,
+             laba_kotor = ?,
+             operasional = ?,
+             kerugian = ?,
+             laba_bersih = ?,
+             locked = 1,
+             created_by = ?,
+             created_at = ?,
+             synced = 0
+         WHERE id = ?`,
+        [
+          params.omzet,
+          params.hpp,
+          params.labaKotor,
+          params.operasional,
+          params.kerugian,
+          params.labaBersih,
+          params.createdBy,
+          now,
+          existing.id,
+        ],
+      );
+
+      return existing.id;
+    }
 
     const result = db.runSync(
       `INSERT INTO rekap_harian (
@@ -524,6 +593,7 @@ export const createRekapHarian = (params: CreateRekapHarianParams) => {
         created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        params.tanggal,
         params.omzet,
         params.hpp,
         params.labaKotor,
@@ -548,12 +618,46 @@ export const getRekapHarianByTanggal = (tanggal: string) => {
     return db.getFirstSync(
       `SELECT *
        FROM rekap_harian
-       WHERE tanggal = ?`,
+       WHERE tanggal = ?
+       ORDER BY locked DESC, id DESC
+       LIMIT 1`,
       [tanggal],
     );
   } catch (error) {
     console.error("getRekapHarianByTanggal error:", error);
     return null;
+  }
+};
+
+export const getStokMasukByTanggal = (tanggal: string) => {
+  try {
+    return db.getAllSync<{
+      id: number;
+      item_id: number;
+      item_nama: string | null;
+      quantity: number;
+      harga_beli: number;
+      harga_jual: number | null;
+      tanggal: string;
+    }>(
+      `SELECT
+         s.id,
+         s.item_id,
+         i.nama AS item_nama,
+         s.quantity,
+         s.harga_beli,
+         i.harga_jual,
+         s.tanggal
+       FROM stok s
+       LEFT JOIN items i ON i.id = s.item_id
+       WHERE s.jenis = 'masuk'
+         AND s.tanggal LIKE ?
+       ORDER BY s.tanggal DESC`,
+      [`${tanggal}%`],
+    );
+  } catch (error) {
+    console.error("getStokMasukByTanggal error:", error);
+    return [];
   }
 };
 
@@ -825,8 +929,8 @@ export function dropAllTables() {
   // db.execSync("DROP TABLE IF EXISTS users");
   // db.execSync("DROP TABLE IF EXISTS items");
   // db.execSync("DROP TABLE IF EXISTS transaksi");
-  db.execSync("DROP TABLE IF EXISTS stok");
-  // db.execSync("DROP TABLE IF EXISTS kas");
+  // db.execSync("DROP TABLE IF EXISTS stok");
+  db.execSync("DROP TABLE IF EXISTS kas");
 }
 
 export function createItem(
@@ -894,10 +998,43 @@ export function createKas(
 ): number {
   const tanggal = new Date().toISOString();
   const result = db.runSync(
-    "INSERT INTO kas (item_id, nama, jenis, keterangan, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [item_id || null, nama, jenis, keterangan, jumlah, tanggal, operator_id],
+    "INSERT INTO kas (item_id, nama, jenis, keterangan, jumlah, tanggal, created_at, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [
+      item_id || null,
+      nama,
+      jenis,
+      keterangan,
+      jumlah,
+      tanggal,
+      tanggal,
+      operator_id,
+    ],
   );
   return result.lastInsertRowId;
+}
+
+export function createAkunKas(
+  nama: string,
+  jenis: "cash" | "bank" | "ewallet",
+  keterangan: string,
+  operator_id: number,
+): number {
+  const normalizedName = nama.trim();
+  const existing = db.getFirstSync<{ id: number }>(
+    `SELECT id
+     FROM kas
+     WHERE item_id IS NULL
+       AND LOWER(nama) = LOWER(?)
+       AND LOWER(jenis) = LOWER(?)
+     LIMIT 1`,
+    [normalizedName, jenis],
+  );
+
+  if (existing) {
+    throw new Error("Kas sudah ada");
+  }
+
+  return createKas(normalizedName, jenis, keterangan.trim(), 0, operator_id);
 }
 
 export function updateKasQuantity(
@@ -924,8 +1061,8 @@ export function updateKasQuantity(
 
   // Log to kas table for history
   const result = db.runSync(
-    "INSERT INTO kas (item_id, nama, jenis, keterangan, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [item_id, "", jenis, keterangan, quantity, tanggal, operator_id],
+    "INSERT INTO kas (item_id, nama, jenis, keterangan, jumlah, tanggal, created_at, operator_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [item_id, "", jenis, keterangan, quantity, tanggal, tanggal, operator_id],
   );
   return result.lastInsertRowId;
 }
@@ -952,10 +1089,14 @@ export function createUser(
   role: "admin" | "operator",
 ): number {
   const result = db.runSync(
-    "INSERT INTO users (nama, username, password, role) VALUES (?, ?, ?, ?)",
-    [nama, username, password, role],
+    "INSERT INTO users (uuid, nama, username, password, role, aktif, synced) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [uuid.v4(), nama, username, password, role, 1, 0],
   );
   return result.lastInsertRowId;
+}
+
+export function deactivateUser(id: number) {
+  db.runSync("UPDATE users SET aktif = 0, synced = 0 WHERE id = ?", [id]);
 }
 
 export function insertStok(
@@ -1045,6 +1186,25 @@ export function deleteItem(id: number) {
   db.runSync("UPDATE items SET aktif=0, synced=0 WHERE id=?", [id]);
 }
 
+export function deleteTransaksi(id: number) {
+  const transaksi = db.getFirstSync<Transaksi>(
+    "SELECT * FROM transaksi WHERE id = ?",
+    [id],
+  );
+
+  if (!transaksi) {
+    throw new Error("Transaksi tidak ditemukan");
+  }
+
+  db.withTransactionSync(() => {
+    db.runSync("DELETE FROM transaksi WHERE id = ?", [id]);
+    db.runSync(
+      "UPDATE items SET quantity = quantity + ?, synced = 0 WHERE id = ?",
+      [transaksi.quantity, transaksi.item_id],
+    );
+  });
+}
+
 export function getTransaksiHarian(tanggal: string): Transaksi[] {
   const result = db.getAllSync(
     "SELECT * FROM transaksi WHERE tanggal LIKE ? ORDER BY tanggal DESC",
@@ -1121,6 +1281,56 @@ export function ensureDefaultUser(): number {
 export function getAllKas(): kas[] {
   const result = db.getAllSync("SELECT * FROM kas");
   return result as kas[];
+}
+
+export function getDaftarKas(): kas[] {
+  const result = db.getAllSync<kas>(
+    `SELECT *
+     FROM kas
+     WHERE item_id IS NULL
+       AND LOWER(jenis) IN ('cash', 'bank', 'ewallet', 'e-wallet', 'tunai', 'rekening')
+     ORDER BY
+       CASE LOWER(jenis)
+         WHEN 'cash' THEN 1
+         WHEN 'tunai' THEN 1
+         WHEN 'bank' THEN 2
+         WHEN 'rekening' THEN 2
+         WHEN 'ewallet' THEN 3
+         WHEN 'e-wallet' THEN 3
+         ELSE 4
+       END,
+       nama ASC`,
+  );
+  return result as kas[];
+}
+
+export function getRiwayatStok(limit = 50) {
+  return db.getAllSync<
+    Stok & {
+      item_nama: string | null;
+    }
+  >(
+    `SELECT
+       s.*,
+       i.nama AS item_nama
+     FROM stok s
+     LEFT JOIN items i ON i.id = s.item_id
+     ORDER BY s.tanggal DESC, s.id DESC
+     LIMIT ?`,
+    [limit],
+  );
+}
+
+export function getPilihanKas(): Array<{
+  id: number;
+  nama: string;
+  jenis: string;
+}> {
+  return getDaftarKas().map((row) => ({
+    id: row.id,
+    nama: row.nama,
+    jenis: row.jenis,
+  }));
 }
 
 export function getAllTransaksi(): Transaksi[] {

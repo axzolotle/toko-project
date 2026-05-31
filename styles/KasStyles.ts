@@ -1097,6 +1097,9 @@ export const createStyles = (c: typeof lightColors) =>
       alignItems: "center",
       backgroundColor: c.btnKunciLockBg,
     },
+    btnDisabled: {
+      opacity: 0.55,
+    },
     btnKunciText: {
       fontSize: 14,
       fontWeight: "700",

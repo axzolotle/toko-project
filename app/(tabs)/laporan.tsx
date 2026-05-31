@@ -1,14 +1,15 @@
-import { getTransaksiHarian } from "@/database/db2";
+import { deleteTransaksi, getTransaksiHarian } from "@/database/db2";
 import { useTheme } from "@/lib/ThemeContext";
 import {
-  darkColors,
-  darkStyles,
-  lightColors,
-  lightStyles,
-} from "@/styles/LaporanStyles";
+  LaporanDarkColors as darkColors,
+  LaporanDarkStyles as darkStyles,
+  LaporanLightColors as lightColors,
+  LaporanLightStyles as lightStyles,
+} from "@/styles/AppStyle";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StatusBar,
   Text,
@@ -215,13 +216,19 @@ const PerJenisSection: React.FC<{
 const RiwayatSection: React.FC<{
   riwayat: Transaksi[];
   S: any;
-}> = ({ riwayat, S }) => (
+  onDeletePress: (transaksi: Transaksi) => void;
+}> = ({ riwayat, S, onDeletePress }) => (
   <>
     <Text style={S.sectionLabel}>Riwayat ({riwayat.length})</Text>
     {riwayat.map((t) => {
       const laba = t.harga - t.modal;
       return (
-        <View key={t.id} style={S.riwayatCard}>
+        <TouchableOpacity
+          key={t.id}
+          style={S.riwayatCard}
+          activeOpacity={0.9}
+          onLongPress={() => onDeletePress(t)}
+        >
           {/* Nomor urut */}
           <View style={S.riwayatNumBadge}>
             <Text style={S.riwayatNumText}>{t.id}</Text>
@@ -241,7 +248,7 @@ const RiwayatSection: React.FC<{
             </View>
             <Text style={S.riwayatProfit}>+{formatRp(laba)}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     })}
   </>
@@ -261,6 +268,29 @@ const LaporanScreen: React.FC = () => {
 
   const labelTanggal = formatTanggalLabel(tanggal);
   const hariIni = isHariIni(tanggal);
+
+  const handleDeleteTransaksi = (transaksi: Transaksi) => {
+    Alert.alert(
+      "Hapus Transaksi",
+      `Hapus transaksi "${transaksi.nama}" dari laporan? Stok item akan dikembalikan.`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              deleteTransaksi(transaksi.id);
+              await sync();
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Gagal menghapus transaksi");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <>
@@ -333,7 +363,11 @@ const LaporanScreen: React.FC = () => {
             <PerJenisSection perJenis={data.perJenis} S={S} />
 
             {/* Riwayat */}
-            <RiwayatSection riwayat={data.riwayat} S={S} />
+            <RiwayatSection
+              riwayat={data.riwayat}
+              S={S}
+              onDeletePress={handleDeleteTransaksi}
+            />
           </ScrollView>
         )}
         {/* </SafeAreaView> */}

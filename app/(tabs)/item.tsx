@@ -1,10 +1,15 @@
 import { useTheme } from "@/lib/ThemeContext";
 import {
-  darkColors,
-  darkStyles,
-  lightColors,
-  lightStyles,
-} from "@/styles/ItemListStyles";
+  ItemDarkColors as darkColors,
+  ItemDarkStyles as darkStyles,
+  ItemLightColors as lightColors,
+  ItemLightStyles as lightStyles,
+} from "@/styles/AppStyle";
+import {
+  formatCurrencyInput,
+  formatRp,
+  parseCurrencyInput,
+} from "@/utils/currencyInput";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -22,6 +27,7 @@ import {
 } from "react-native";
 import {
   createItem,
+  deleteItem,
   getAllItems,
   getJenisItems,
   getKategoriItems,
@@ -35,8 +41,6 @@ import { useCurrentUser } from "../../service/useCurrentUser";
 // ============================================================
 type ModalType = null | "item" | "stock";
 
-const formatRp = (num: number) => "Rp " + num.toLocaleString("id-ID");
-
 // ============================================================
 // ITEM CARD COMPONENT
 // ============================================================
@@ -44,9 +48,15 @@ interface ItemCardProps {
   item: Item;
   S: any;
   onStockPress: (itemId: number, itemName: string) => void;
+  onDeletePress: (item: Item) => void;
 }
 
-const ItemCard: React.FC<ItemCardProps> = ({ item, S, onStockPress }) => {
+const ItemCard: React.FC<ItemCardProps> = ({
+  item,
+  S,
+  onStockPress,
+  onDeletePress,
+}) => {
   const modal = item.harga_modal || 0;
   const jual = item.harga_jual || 0;
   const profit = jual - modal;
@@ -54,7 +64,11 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, S, onStockPress }) => {
   const isLowStock = item.quantity < 5;
 
   return (
-    <View style={S.card}>
+    <TouchableOpacity
+      style={S.card}
+      activeOpacity={0.9}
+      onLongPress={() => onDeletePress(item)}
+    >
       {/* ── LEFT COLUMN ── */}
       <View style={S.cardLeft}>
         <Text style={S.cardTitle}>{item.nama}</Text>
@@ -92,7 +106,7 @@ const ItemCard: React.FC<ItemCardProps> = ({ item, S, onStockPress }) => {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -148,8 +162,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     }
   };
 
-  const modalNum = parseFloat(hargaModal) || 0;
-  const jualNum = parseFloat(hargaJual) || 0;
+  const modalNum = parseCurrencyInput(hargaModal);
+  const jualNum = parseCurrencyInput(hargaJual);
   const labaNum = jualNum - modalNum;
   const marginPct = modalNum > 0 ? Math.round((labaNum / modalNum) * 100) : 0;
   const jenisAkhir = jenis === "__custom__" ? jenisCustom.trim() : jenis;
@@ -384,8 +398,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               <TextInput
                 style={S.inputBase}
                 value={hargaModal}
-                onChangeText={setHargaModal}
-                placeholder="0"
+                onChangeText={(value) => setHargaModal(formatCurrencyInput(value))}
+                placeholder="Rp 0"
                 placeholderTextColor={C.searchPlaceholder}
                 keyboardType="numeric"
               />
@@ -400,8 +414,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               <TextInput
                 style={S.inputBase}
                 value={hargaJual}
-                onChangeText={setHargaJual}
-                placeholder="0"
+                onChangeText={(value) => setHargaJual(formatCurrencyInput(value))}
+                placeholder="Rp 0"
                 placeholderTextColor={C.searchPlaceholder}
                 keyboardType="numeric"
               />
@@ -503,7 +517,7 @@ const StockModal: React.FC<StockModalProps> = ({
         qty,
         "masuk",
         "Penambahan stok via aplikasi",
-        parseFloat(hargaBeliStok) || 0,
+        parseCurrencyInput(hargaBeliStok),
         userId,
       );
 
@@ -537,7 +551,6 @@ const StockModal: React.FC<StockModalProps> = ({
     >
       <View style={S.modalOverlay}>
         <View style={S.modalSheet}>
-          {/* Header */}
           <Text style={S.modalTitle}>Tambah Stok: {itemName}</Text>
 
           {/* Current Stock Display */}
@@ -573,8 +586,8 @@ const StockModal: React.FC<StockModalProps> = ({
           <TextInput
             style={S.inputBase}
             value={hargaBeliStok}
-            onChangeText={setHargaBeliStok}
-            placeholder="Masukkan harga beli barang"
+            onChangeText={(value) => setHargaBeliStok(formatCurrencyInput(value))}
+            placeholder="Rp 0"
             placeholderTextColor={C.searchPlaceholder}
             keyboardType="numeric"
           />
@@ -676,6 +689,30 @@ export default function BarangScreen() {
     setShowModal(null);
     setEditingItemId(null);
     setEditingItemName("");
+  };
+
+  const handleDeleteItem = (item: Item) => {
+    Alert.alert(
+      "Hapus Item",
+      `Hapus "${item.nama}" dari daftar item?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: () => {
+            try {
+              deleteItem(item.id);
+              loadItems();
+              loadJenis();
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Error", "Gagal menghapus item");
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ============================================================
@@ -811,7 +848,12 @@ export default function BarangScreen() {
             data={filteredItems}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
-              <ItemCard item={item} S={S} onStockPress={openStockModal} />
+              <ItemCard
+                item={item}
+                S={S}
+                onStockPress={openStockModal}
+                onDeletePress={handleDeleteItem}
+              />
             )}
             style={S.list}
             contentContainerStyle={S.listContent}

@@ -1,5 +1,9 @@
 import { createKas } from "@/database/db2";
 import { useCurrentUser } from "@/service/useCurrentUser";
+import {
+  formatCurrencyInput,
+  parseCurrencyInput,
+} from "@/utils/currencyInput";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -42,7 +46,7 @@ export default function TestScreen() {
     }
 
     try {
-      const jumlah = parseFloat(kasJumlah);
+      const jumlah = parseCurrencyInput(kasJumlah);
       if (isNaN(jumlah)) {
         Alert.alert("Error", "Jumlah harus berupa angka!");
         return;
@@ -120,7 +124,7 @@ export default function TestScreen() {
           style={styles.input}
           placeholder="Masukkan jumlah uang"
           value={kasJumlah}
-          onChangeText={setKasJumlah}
+          onChangeText={(value) => setKasJumlah(formatCurrencyInput(value))}
           keyboardType="decimal-pad"
         />
 

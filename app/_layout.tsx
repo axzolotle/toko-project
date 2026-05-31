@@ -12,7 +12,7 @@ import {
   getAllStok,
   getAllTransaksi,
   getAllUsers,
-  initDB,
+  initDB
 } from "../database/db2";
 
 export default function RootLayout() {

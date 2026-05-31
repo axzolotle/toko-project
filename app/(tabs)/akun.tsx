@@ -1,4 +1,16 @@
-import { getUserById } from "@/database/db2";
+import {
+  checkUsernameExists,
+  createAkunKas,
+  createUser,
+  deactivateUser,
+  getAllUsers,
+  getDaftarKas,
+  getRiwayatStok,
+  getUserById,
+  kas,
+  Stok,
+  User,
+} from "@/database/db2";
 import { syncAllTables } from "@/database/sync";
 import { useTheme } from "@/lib/ThemeContext";
 import { CURRENT_USER_KEY, useCurrentUser } from "@/service/useCurrentUser";
@@ -6,12 +18,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
+  Modal,
   ScrollView,
   StatusBar,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ============================================================
 //  TYPES
@@ -34,6 +50,17 @@ interface AppSettings {
   terakhirSync: string; // '09:30'
 }
 
+type StokHistoryRow = Stok & {
+  item_nama: string | null;
+};
+
+type KasJenis = "cash" | "bank" | "ewallet";
+
+type InfoItem = {
+  title: string;
+  desc: string;
+};
+
 // ============================================================
 //  1. LAYER SQL / DATABASE
 //     → Ganti dengan query SQLite / fetch API / AsyncStorage
@@ -53,7 +80,7 @@ const db_getUserProfile = async (userId: number): Promise<UserProfile> => {
       id: users.id,
       nama: users.nama,
       username: users.username,
-      role: users.role === null ? "operator" : "admin", // Convert dari DB boolean
+      role: users.role === "admin" ? "admin" : "operator",
       avatarInisial: users.nama?.charAt(0).toUpperCase() || "U",
     };
   } catch (error) {
@@ -307,12 +334,454 @@ const SettingRow: React.FC<RowProps> = ({
   </TouchableOpacity>
 );
 
+const formatTanggalPendek = (iso: string) => {
+  const normalized = iso.includes("T") ? iso : iso.replace(" ", "T");
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return iso;
+  }
+
+  return date.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const kasJenisOptions: Array<{ key: KasJenis; label: string }> = [
+  { key: "cash", label: "Cash" },
+  { key: "bank", label: "Bank" },
+  { key: "ewallet", label: "E-Wallet" },
+];
+
+const userRoleOptions: Array<{ key: UserRole; label: string }> = [
+  { key: "operator", label: "Operator" },
+  { key: "admin", label: "Admin" },
+];
+
+const tentangAplikasiItems: InfoItem[] = [
+  {
+    title: "Konter v1.0.0",
+    desc: "Aplikasi kasir offline-first untuk mencatat transaksi, stok, kas, dan rekap harian toko.",
+  },
+  {
+    title: "Alur kerja utama",
+    desc: "Transaksi mengurangi stok, penambahan stok tercatat sebagai riwayat, dan rekap harian bisa dikunci sebagai catatan final.",
+  },
+  {
+    title: "Kas toko",
+    desc: "Kas dipakai sebagai akun tujuan seperti Cash, rekening bank, atau e-wallet saat mencatat rekap kas.",
+  },
+  {
+    title: "Sinkronisasi",
+    desc: "Data tersimpan di device lebih dulu. Tombol sinkronisasi mengirim data lokal yang belum tersinkron.",
+  },
+];
+
+const privasiItems: InfoItem[] = [
+  {
+    title: "Data lokal",
+    desc: "Data transaksi, item, stok, kas, dan pengguna disimpan di database lokal pada device ini.",
+  },
+  {
+    title: "Sync manual",
+    desc: "Data hanya dikirim saat fitur sinkronisasi dijalankan. Pastikan jaringan stabil sebelum sync.",
+  },
+  {
+    title: "Akun dan peran",
+    desc: "Admin bisa mengelola pengguna dan pengaturan penting. Operator fokus ke transaksi dan pencatatan operasional.",
+  },
+  {
+    title: "Keamanan device",
+    desc: "Gunakan kunci layar HP, logout jika device dipakai bersama, dan batasi akun admin hanya untuk orang yang dipercaya.",
+  },
+];
+
+const getKasJenisLabel = (jenis: string) => {
+  switch (jenis.toLowerCase()) {
+    case "cash":
+    case "tunai":
+      return "Cash";
+    case "bank":
+    case "rekening":
+      return "Bank";
+    case "ewallet":
+    case "e-wallet":
+      return "E-Wallet";
+    default:
+      return jenis;
+  }
+};
+
+const HistoryModal: React.FC<{
+  visible: boolean;
+  title: string;
+  emptyText: string;
+  onClose: () => void;
+  S: any;
+  children: React.ReactNode;
+}> = ({ visible, title, emptyText, onClose, S, children }) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={S.modalOverlay}>
+        <View
+          style={[
+            S.modalSheet,
+            { paddingBottom: Math.max(28, insets.bottom + 28) },
+          ]}
+        >
+          <Text style={S.modalTitle}>{title}</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {children || <Text style={S.modalEmptyText}>{emptyText}</Text>}
+          </ScrollView>
+          <TouchableOpacity style={S.modalCloseButton} onPress={onClose}>
+            <Text style={S.modalCloseText}>Tutup</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const StokHistoryList: React.FC<{ rows: StokHistoryRow[]; S: any }> = ({
+  rows,
+  S,
+}) => (
+  <>
+    {rows.map((row, index) => {
+      const isLast = index === rows.length - 1;
+      return (
+        <View key={row.id} style={isLast ? S.modalItemLast : S.modalItem}>
+          <View style={S.modalItemInfo}>
+            <Text style={S.modalItemTitle}>
+              {row.item_nama ?? `Item #${row.item_id}`}
+            </Text>
+            <Text style={S.modalItemMeta}>
+              {row.jenis} · qty {row.quantity} · {formatTanggalPendek(row.tanggal)}
+            </Text>
+            {row.keterangan ? (
+              <Text style={S.modalItemMeta}>{row.keterangan}</Text>
+            ) : null}
+          </View>
+          <Text style={S.modalItemValue}>
+            {row.jenis === "masuk" ? "+" : "-"}
+            {row.quantity}
+          </Text>
+        </View>
+      );
+    })}
+  </>
+);
+
+const KasList: React.FC<{ rows: kas[]; S: any }> = ({ rows, S }) => (
+  <>
+    {rows.map((row, index) => {
+      const isLast = index === rows.length - 1;
+      return (
+        <View key={row.id} style={isLast ? S.modalItemLast : S.modalItem}>
+          <View style={S.modalItemInfo}>
+            <Text style={S.modalItemTitle}>{row.nama}</Text>
+            <Text style={S.modalItemMeta}>
+              {getKasJenisLabel(row.jenis)} · dibuat{" "}
+              {formatTanggalPendek(row.created_at ?? row.tanggal)}
+            </Text>
+            {row.keterangan ? (
+              <Text style={S.modalItemMeta}>{row.keterangan}</Text>
+            ) : null}
+          </View>
+          <Text style={S.modalItemValue}>{getKasJenisLabel(row.jenis)}</Text>
+        </View>
+      );
+    })}
+  </>
+);
+
+const InfoList: React.FC<{ rows: InfoItem[]; S: any }> = ({ rows, S }) => (
+  <>
+    {rows.map((row, index) => {
+      const isLast = index === rows.length - 1;
+      return (
+        <View key={row.title} style={isLast ? S.modalItemLast : S.modalItem}>
+          <View style={S.modalItemInfo}>
+            <Text style={S.modalItemTitle}>{row.title}</Text>
+            <Text style={S.modalItemMeta}>{row.desc}</Text>
+          </View>
+        </View>
+      );
+    })}
+  </>
+);
+
+const UserList: React.FC<{
+  rows: User[];
+  currentUserId: number;
+  onDelete: (row: User) => void;
+  S: any;
+}> = ({ rows, currentUserId, onDelete, S }) => (
+  <>
+    {rows.map((row, index) => {
+      const isLast = index === rows.length - 1;
+      const isCurrent = row.id === currentUserId;
+      return (
+        <View key={row.id} style={isLast ? S.modalItemLast : S.modalItem}>
+          <View style={S.modalItemInfo}>
+            <Text style={S.modalItemTitle}>
+              {row.nama} {isCurrent ? "(Anda)" : ""}
+            </Text>
+            <Text style={S.modalItemMeta}>
+              {row.username} · {getLabelRole(row.role)}
+            </Text>
+          </View>
+          {!isCurrent ? (
+            <TouchableOpacity
+              style={S.modalDangerButton}
+              onPress={() => onDelete(row)}
+              activeOpacity={0.8}
+            >
+              <Text style={S.modalDangerText}>Hapus</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={S.modalItemValue}>{getLabelRole(row.role)}</Text>
+          )}
+        </View>
+      );
+    })}
+  </>
+);
+
+const TambahKasModal: React.FC<{
+  visible: boolean;
+  nama: string;
+  jenis: KasJenis;
+  keterangan: string;
+  onChangeNama: (value: string) => void;
+  onChangeJenis: (value: KasJenis) => void;
+  onChangeKeterangan: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  S: any;
+  C: any;
+}> = ({
+  visible,
+  nama,
+  jenis,
+  keterangan,
+  onChangeNama,
+  onChangeJenis,
+  onChangeKeterangan,
+  onClose,
+  onSubmit,
+  S,
+  C,
+}) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={S.modalOverlay}>
+        <View
+          style={[
+            S.modalSheet,
+            { paddingBottom: Math.max(28, insets.bottom + 28) },
+          ]}
+        >
+          <Text style={S.modalTitle}>Tambah Kas</Text>
+
+          <Text style={S.modalLabel}>Jenis Kas</Text>
+          <View style={S.kasTypeRow}>
+            {kasJenisOptions.map((option) => {
+              const active = jenis === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[S.kasTypeOption, active && S.kasTypeOptionActive]}
+                  onPress={() => onChangeJenis(option.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      S.kasTypeOptionText,
+                      active && S.kasTypeOptionActiveText,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={S.modalLabel}>Nama Kas</Text>
+          <TextInput
+            style={S.modalInput}
+            value={nama}
+            onChangeText={onChangeNama}
+            placeholder="contoh: BCA, DANA, Cash Toko"
+            placeholderTextColor={C.rowDesc}
+          />
+
+          <Text style={S.modalLabel}>Keterangan</Text>
+          <TextInput
+            style={[S.modalInput, S.modalTextArea]}
+            value={keterangan}
+            onChangeText={onChangeKeterangan}
+            placeholder="opsional"
+            placeholderTextColor={C.rowDesc}
+            multiline
+          />
+
+          <View style={S.modalActionRow}>
+            <TouchableOpacity style={S.modalCancelButton} onPress={onClose}>
+              <Text style={S.modalCancelText}>Batal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={S.modalSubmitButton} onPress={onSubmit}>
+              <Text style={S.modalSubmitText}>Simpan</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const TambahPenggunaModal: React.FC<{
+  visible: boolean;
+  nama: string;
+  username: string;
+  password: string;
+  role: UserRole;
+  onChangeNama: (value: string) => void;
+  onChangeUsername: (value: string) => void;
+  onChangePassword: (value: string) => void;
+  onChangeRole: (value: UserRole) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+  S: any;
+  C: any;
+}> = ({
+  visible,
+  nama,
+  username,
+  password,
+  role,
+  onChangeNama,
+  onChangeUsername,
+  onChangePassword,
+  onChangeRole,
+  onClose,
+  onSubmit,
+  S,
+  C,
+}) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={S.modalOverlay}>
+        <View
+          style={[
+            S.modalSheet,
+            { paddingBottom: Math.max(28, insets.bottom + 28) },
+          ]}
+        >
+          <Text style={S.modalTitle}>Tambah Pengguna</Text>
+
+          <Text style={S.modalLabel}>Peran</Text>
+          <View style={S.kasTypeRow}>
+            {userRoleOptions.map((option) => {
+              const active = role === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[S.kasTypeOption, active && S.kasTypeOptionActive]}
+                  onPress={() => onChangeRole(option.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      S.kasTypeOptionText,
+                      active && S.kasTypeOptionActiveText,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={S.modalLabel}>Nama</Text>
+          <TextInput
+            style={S.modalInput}
+            value={nama}
+            onChangeText={onChangeNama}
+            placeholder="contoh: Rina"
+            placeholderTextColor={C.rowDesc}
+          />
+
+          <Text style={S.modalLabel}>Username</Text>
+          <TextInput
+            style={S.modalInput}
+            value={username}
+            onChangeText={onChangeUsername}
+            placeholder="contoh: rina"
+            placeholderTextColor={C.rowDesc}
+            autoCapitalize="none"
+          />
+
+          <Text style={S.modalLabel}>Password</Text>
+          <TextInput
+            style={S.modalInput}
+            value={password}
+            onChangeText={onChangePassword}
+            placeholder="minimal 4 karakter"
+            placeholderTextColor={C.rowDesc}
+            secureTextEntry
+          />
+
+          <View style={S.modalActionRow}>
+            <TouchableOpacity style={S.modalCancelButton} onPress={onClose}>
+              <Text style={S.modalCancelText}>Batal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={S.modalSubmitButton} onPress={onSubmit}>
+              <Text style={S.modalSubmitText}>Simpan</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 // ============================================================
 //  5. MAIN SCREEN
 // ============================================================
 
 const AkunScreen: React.FC = () => {
   const { isDark, colors: C, styles: S } = useTheme();
+  const [activeModal, setActiveModal] = useState<
+    | null
+    | "stok"
+    | "kelola-kas"
+    | "tambah-kas"
+    | "kelola-pengguna"
+    | "tambah-pengguna"
+    | "tentang"
+    | "privasi"
+  >(null);
+  const [stokHistory, setStokHistory] = useState<StokHistoryRow[]>([]);
+  const [daftarKas, setDaftarKas] = useState<kas[]>([]);
+  const [daftarPengguna, setDaftarPengguna] = useState<User[]>([]);
+  const [kasNama, setKasNama] = useState("");
+  const [kasJenis, setKasJenis] = useState<KasJenis>("cash");
+  const [kasKeterangan, setKasKeterangan] = useState("");
+  const [penggunaNama, setPenggunaNama] = useState("");
+  const [penggunaUsername, setPenggunaUsername] = useState("");
+  const [penggunaPassword, setPenggunaPassword] = useState("");
+  const [penggunaRole, setPenggunaRole] = useState<UserRole>("operator");
 
   const {
     user,
@@ -335,6 +804,148 @@ const AkunScreen: React.FC = () => {
   }
 
   const isAdmin = user.role === "admin";
+
+  const openStokHistory = () => {
+    setStokHistory(getRiwayatStok());
+    setActiveModal("stok");
+  };
+
+  const refreshDaftarKas = () => {
+    setDaftarKas(getDaftarKas());
+  };
+
+  const refreshDaftarPengguna = () => {
+    setDaftarPengguna(getAllUsers());
+  };
+
+  const openKelolaKas = () => {
+    refreshDaftarKas();
+    setActiveModal("kelola-kas");
+  };
+
+  const openTambahKas = () => {
+    setKasNama("");
+    setKasJenis("cash");
+    setKasKeterangan("");
+    setActiveModal("tambah-kas");
+  };
+
+  const closeTambahKas = () => {
+    setKasNama("");
+    setKasJenis("cash");
+    setKasKeterangan("");
+    setActiveModal("kelola-kas");
+  };
+
+  const simpanKas = () => {
+    if (!kasNama.trim()) {
+      alert("Nama kas wajib diisi");
+      return;
+    }
+
+    try {
+      createAkunKas(kasNama, kasJenis, kasKeterangan, user.id);
+      refreshDaftarKas();
+      closeTambahKas();
+      alert("Kas berhasil ditambahkan");
+    } catch (error) {
+      console.error(error);
+      alert(
+        error instanceof Error ? error.message : "Gagal menambahkan kas",
+      );
+    }
+  };
+
+  const openKelolaPengguna = () => {
+    refreshDaftarPengguna();
+    setActiveModal("kelola-pengguna");
+  };
+
+  const openTambahPengguna = () => {
+    setPenggunaNama("");
+    setPenggunaUsername("");
+    setPenggunaPassword("");
+    setPenggunaRole("operator");
+    setActiveModal("tambah-pengguna");
+  };
+
+  const closeTambahPengguna = () => {
+    setPenggunaNama("");
+    setPenggunaUsername("");
+    setPenggunaPassword("");
+    setPenggunaRole("operator");
+    setActiveModal("kelola-pengguna");
+  };
+
+  const simpanPengguna = () => {
+    const nama = penggunaNama.trim();
+    const username = penggunaUsername.trim();
+    const password = penggunaPassword.trim();
+
+    if (!nama) {
+      alert("Nama pengguna wajib diisi");
+      return;
+    }
+
+    if (!username) {
+      alert("Username wajib diisi");
+      return;
+    }
+
+    if (password.length < 4) {
+      alert("Password minimal 4 karakter");
+      return;
+    }
+
+    if (checkUsernameExists(username)) {
+      alert("Username sudah dipakai");
+      return;
+    }
+
+    try {
+      createUser(nama, username, password, penggunaRole);
+      refreshDaftarPengguna();
+      closeTambahPengguna();
+      alert("Pengguna berhasil ditambahkan");
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menambahkan pengguna");
+    }
+  };
+
+  const hapusPengguna = (target: User) => {
+    if (target.id === user.id) {
+      alert("Akun yang sedang dipakai tidak bisa dihapus");
+      return;
+    }
+
+    const adminCount = daftarPengguna.filter((row) => row.role === "admin").length;
+    if (target.role === "admin" && adminCount <= 1) {
+      alert("Admin terakhir tidak bisa dihapus");
+      return;
+    }
+
+    Alert.alert(
+      "Hapus Pengguna",
+      `Hapus akun "${target.nama}" dari daftar pengguna aktif?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: () => {
+            try {
+              deactivateUser(target.id);
+              refreshDaftarPengguna();
+            } catch (error) {
+              console.error(error);
+              alert("Gagal menghapus pengguna");
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <>
@@ -444,7 +1055,15 @@ const AkunScreen: React.FC = () => {
               title="Riwayat Stok"
               desc="masuk dan keluar stok"
               S={S}
-              onPress={() => console.log("Riwayat Stok")}
+              onPress={openStokHistory}
+              right={<Text style={S.rowArrow}>›</Text>}
+            />
+            <SettingRow
+              emoji="💰"
+              title="Kelola Kas"
+              desc="cash, bank, dan e-wallet"
+              S={S}
+              onPress={openKelolaKas}
               right={<Text style={S.rowArrow}>›</Text>}
             />
             <SettingRow
@@ -472,9 +1091,9 @@ const AkunScreen: React.FC = () => {
                 <SettingRow
                   emoji="👥"
                   title="Kelola Pengguna"
-                  desc="tambah, edit, hapus operator"
+                  desc="tambah dan hapus pengguna"
                   S={S}
-                  onPress={() => console.log("Kelola Pengguna")}
+                  onPress={openKelolaPengguna}
                   right={<Text style={S.rowArrow}>›</Text>}
                 />
                 <SettingRow
@@ -497,7 +1116,7 @@ const AkunScreen: React.FC = () => {
               title="Tentang Aplikasi"
               desc="Konter v1.0.0"
               S={S}
-              onPress={() => console.log("Tentang Aplikasi")}
+              onPress={() => setActiveModal("tentang")}
               right={<Text style={S.rowArrow}>›</Text>}
             />
             <SettingRow
@@ -506,7 +1125,7 @@ const AkunScreen: React.FC = () => {
               desc="data tersimpan lokal"
               isLast
               S={S}
-              onPress={() => console.log("Privasi")}
+              onPress={() => setActiveModal("privasi")}
               right={<Text style={S.rowArrow}>›</Text>}
             />
           </View>
@@ -533,6 +1152,108 @@ const AkunScreen: React.FC = () => {
         </ScrollView>
         {/* </SafeAreaView> */}
       </View>
+      <HistoryModal
+        visible={activeModal === "stok"}
+        title="Riwayat Stok"
+        emptyText="Belum ada riwayat stok"
+        onClose={() => setActiveModal(null)}
+        S={S}
+      >
+        {stokHistory.length > 0 ? (
+          <StokHistoryList rows={stokHistory} S={S} />
+        ) : null}
+      </HistoryModal>
+      <HistoryModal
+        visible={activeModal === "kelola-kas"}
+        title="Kelola Kas"
+        emptyText="Belum ada kas"
+        onClose={() => setActiveModal(null)}
+        S={S}
+      >
+        {daftarKas.length > 0 ? (
+          <KasList rows={daftarKas} S={S} />
+        ) : (
+          <Text style={S.modalEmptyText}>Belum ada kas</Text>
+        )}
+        <TouchableOpacity
+          style={S.modalAddButton}
+          onPress={openTambahKas}
+          activeOpacity={0.85}
+        >
+          <Text style={S.modalAddButtonText}>+ Tambah Kas</Text>
+        </TouchableOpacity>
+      </HistoryModal>
+      <TambahKasModal
+        visible={activeModal === "tambah-kas"}
+        nama={kasNama}
+        jenis={kasJenis}
+        keterangan={kasKeterangan}
+        onChangeNama={setKasNama}
+        onChangeJenis={setKasJenis}
+        onChangeKeterangan={setKasKeterangan}
+        onClose={closeTambahKas}
+        onSubmit={simpanKas}
+        S={S}
+        C={C}
+      />
+      <HistoryModal
+        visible={activeModal === "kelola-pengguna"}
+        title="Kelola Pengguna"
+        emptyText="Belum ada pengguna"
+        onClose={() => setActiveModal(null)}
+        S={S}
+      >
+        {daftarPengguna.length > 0 ? (
+          <UserList
+            rows={daftarPengguna}
+            currentUserId={user.id}
+            onDelete={hapusPengguna}
+            S={S}
+          />
+        ) : (
+          <Text style={S.modalEmptyText}>Belum ada pengguna</Text>
+        )}
+        <TouchableOpacity
+          style={S.modalAddButton}
+          onPress={openTambahPengguna}
+          activeOpacity={0.85}
+        >
+          <Text style={S.modalAddButtonText}>+ Tambah Pengguna</Text>
+        </TouchableOpacity>
+      </HistoryModal>
+      <TambahPenggunaModal
+        visible={activeModal === "tambah-pengguna"}
+        nama={penggunaNama}
+        username={penggunaUsername}
+        password={penggunaPassword}
+        role={penggunaRole}
+        onChangeNama={setPenggunaNama}
+        onChangeUsername={setPenggunaUsername}
+        onChangePassword={setPenggunaPassword}
+        onChangeRole={setPenggunaRole}
+        onClose={closeTambahPengguna}
+        onSubmit={simpanPengguna}
+        S={S}
+        C={C}
+      />
+      <HistoryModal
+        visible={activeModal === "tentang"}
+        title="Tentang Aplikasi"
+        emptyText=""
+        onClose={() => setActiveModal(null)}
+        S={S}
+      >
+        <InfoList rows={tentangAplikasiItems} S={S} />
+      </HistoryModal>
+      <HistoryModal
+        visible={activeModal === "privasi"}
+        title="Privasi & Keamanan"
+        emptyText=""
+        onClose={() => setActiveModal(null)}
+        S={S}
+      >
+        <InfoList rows={privasiItems} S={S} />
+      </HistoryModal>
     </>
   );
 };

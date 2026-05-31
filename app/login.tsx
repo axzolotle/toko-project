@@ -1,10 +1,10 @@
 import { useAuth } from "@/service/useAuth";
 import {
-  darkColors,
-  darkStyles,
-  lightColors,
-  lightStyles,
-} from "@/styles/LoginStyles";
+  LoginDarkColors as darkColors,
+  LoginDarkStyles as darkStyles,
+  LoginLightColors as lightColors,
+  LoginLightStyles as lightStyles,
+} from "@/styles/AppStyle";
 import { useTheme } from "@/lib/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";

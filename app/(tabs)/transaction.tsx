@@ -8,7 +8,11 @@ import {
 import { useTheme } from "@/lib/ThemeContext";
 import { createStok } from "@/service/Stok";
 import { useCurrentUser } from "@/service/useCurrentUser";
-import { createStyles, darkColors, lightColors } from "@/styles/KasirStyles";
+import {
+  KasirCreateStyles as createStyles,
+  KasirDarkColors as darkColors,
+  KasirLightColors as lightColors,
+} from "@/styles/AppStyle";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -141,9 +145,15 @@ export default function TransactionScreen() {
   useEffect(() => {
     if (selectedJenis) {
       const kategori = getKategoriItems(selectedJenis);
+      const kategoriPertama = kategori[0] ?? "";
+
       setKategoriList(kategori);
-      setSelectedKategori("");
-      setItemList([]);
+      setSelectedKategori(kategoriPertama);
+      setItemList(
+        kategoriPertama
+          ? getItemByjenisandKategori(selectedJenis, kategoriPertama)
+          : [],
+      );
       setSelectedItem(null);
     }
   }, [selectedJenis]);
@@ -154,7 +164,7 @@ export default function TransactionScreen() {
       setItemList(items);
       setSelectedItem(null);
     }
-  }, [selectedKategori]);
+  }, [selectedJenis, selectedKategori]);
 
   // ── HANDLERS ──
   const handleSelectJenis = (jenis: string) => {
@@ -258,7 +268,6 @@ export default function TransactionScreen() {
 
           <View style={S.typeGrid}>
             {jenisList.map((jenis, index) => {
-              const emojis = ["📦", "📱", "💳", "🏦"];
               return (
                 <TouchableOpacity
                   key={jenis}
@@ -266,9 +275,6 @@ export default function TransactionScreen() {
                   onPress={() => handleSelectJenis(jenis)}
                   activeOpacity={0.75}
                 >
-                  <View style={S.typeIconBox}>
-                    <Text style={S.typeIconEmoji}>{emojis[index] || "📦"}</Text>
-                  </View>
                   <Text style={S.typeTitle}>{jenis}</Text>
                   <Text style={S.typeCount}>
                     {kategoriList.length || index + 1} item
@@ -306,8 +312,9 @@ export default function TransactionScreen() {
 
           {/* Filter chips */}
           <View style={S.filterRow}>
-            {kategoriList.map((kategori, i) =>
-              i === 0 || selectedKategori === kategori ? (
+            {kategoriList.map((kategori) => {
+              const isActive = selectedKategori === kategori;
+              return isActive ? (
                 <TouchableOpacity
                   key={kategori}
                   style={S.chipActive}
@@ -325,8 +332,8 @@ export default function TransactionScreen() {
                 >
                   <Text style={S.chipText}>{kategori}</Text>
                 </TouchableOpacity>
-              ),
-            )}
+              );
+            })}
           </View>
 
           {/* Product rows */}
