@@ -127,6 +127,14 @@ interface RekapKasRow {
   operator_id: number;
 }
 
+export interface MasterKasRekap {
+  id: number;
+  nama: string;
+  jenis: string;
+  jumlah: number;
+  tercatat: boolean;
+}
+
 export interface HistoriItem {
   id: number;
   jenis: HistoriJenis;
@@ -141,6 +149,7 @@ export interface HistoriGroup {
   labelTanggal: string;
   terkunci: boolean;
   rekap: RekapHarianRow | null;
+  masterKas: MasterKasRekap[];
   items: HistoriItem[];
 }
 
@@ -392,6 +401,7 @@ export const db_getHistori = async (): Promise<HistoriGroup[]> => {
         labelTanggal: labelTanggalPanjang(tanggal),
         terkunci: !!rekap?.locked,
         rekap,
+        masterKas: getMasterKasRekapByTanggal(tanggal),
         items,
       };
     });
@@ -699,6 +709,50 @@ export function getRekapKasHarian(tanggal: string) {
   ]);
 }
 
+export function getMasterKasRekapByTanggal(tanggal: string): MasterKasRekap[] {
+  const rows = db.getAllSync<{
+    id: number;
+    nama: string;
+    jenis: string;
+    jumlah: number | null;
+    jumlah_catatan: number;
+  }>(
+    `SELECT
+       k.id,
+       k.nama,
+       k.jenis,
+       COALESCE(SUM(r.jumlah), 0) AS jumlah,
+       COUNT(r.id) AS jumlah_catatan
+     FROM kas k
+     LEFT JOIN RekapKas r
+       ON r.kas_id = k.id
+      AND r.tanggal = ?
+     WHERE k.item_id IS NULL
+       AND LOWER(k.jenis) IN ('cash', 'bank', 'ewallet', 'e-wallet', 'tunai', 'rekening')
+     GROUP BY k.id, k.nama, k.jenis
+     ORDER BY
+       CASE LOWER(k.jenis)
+         WHEN 'cash' THEN 1
+         WHEN 'tunai' THEN 1
+         WHEN 'bank' THEN 2
+         WHEN 'rekening' THEN 2
+         WHEN 'ewallet' THEN 3
+         WHEN 'e-wallet' THEN 3
+         ELSE 4
+       END,
+       k.nama ASC`,
+    [tanggal],
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    nama: row.nama,
+    jenis: row.jenis,
+    jumlah: row.jumlah ?? 0,
+    tercatat: row.jumlah_catatan > 0,
+  }));
+}
+
 export function createRekapKas(
   nama: string,
   kas_id: number | null,
@@ -706,6 +760,21 @@ export function createRekapKas(
   operator_id: number,
 ): number {
   const tanggal = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
+  const existing = db.getFirstSync<{ id: number }>(
+    kas_id !== null
+      ? "SELECT id FROM RekapKas WHERE tanggal = ? AND kas_id = ? LIMIT 1"
+      : "SELECT id FROM RekapKas WHERE tanggal = ? AND kas_id IS NULL AND nama = ? LIMIT 1",
+    kas_id !== null ? [tanggal, kas_id] : [tanggal, nama],
+  );
+
+  if (existing) {
+    db.runSync(
+      "UPDATE RekapKas SET nama = ?, jumlah = ?, operator_id = ?, synced = 0 WHERE id = ?",
+      [nama, jumlah, operator_id, existing.id],
+    );
+    return existing.id;
+  }
+
   const result = db.runSync(
     "INSERT INTO RekapKas (nama, kas_id, jumlah, tanggal, operator_id) VALUES (?, ?, ?, ?, ?)",
     [nama, kas_id, jumlah, tanggal, operator_id],

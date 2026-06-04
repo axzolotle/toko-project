@@ -4,6 +4,7 @@ import {
   createRekapHarian,
   createRekapKas,
   db_getHistori as getHistoriFromDb,
+  getMasterKasRekapByTanggal,
   getPilihanKas,
   getRekapHarianByTanggal,
   getStokMasukByTanggal,
@@ -11,6 +12,7 @@ import {
   getTotalOperasionalByTanggal,
   getTransaksiHarian,
   HistoriGroup,
+  MasterKasRekap,
 } from "@/database/db2";
 import { useTheme } from "@/lib/ThemeContext";
 import { useCurrentUser } from "@/service/useCurrentUser";
@@ -53,6 +55,7 @@ interface RekapHarianData {
   operasional: number;
   kerugian: number;
   labaBersih: number;
+  masterKas: MasterKasRekap[];
   penjualan: PenjualanItem[];
   penambahanStok: StokItem[];
 }
@@ -109,6 +112,7 @@ const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
     const kerugian = getTotalKerugianByTanggal(tanggal);
 
     const labaBersih = labaKotor - operasional - kerugian;
+    const masterKas = getMasterKasRekapByTanggal(tanggal);
 
     // Map transaksi to penjualan items
     const penjualan: PenjualanItem[] = transaksi.map((t) => ({
@@ -138,6 +142,7 @@ const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
       operasional: lockedRekap?.operasional ?? operasional,
       kerugian: lockedRekap?.kerugian ?? kerugian,
       labaBersih: lockedRekap?.laba_bersih ?? labaBersih,
+      masterKas,
       penjualan,
       penambahanStok,
     };
@@ -152,6 +157,7 @@ const db_getRekapHarian = async (tanggal: string): Promise<RekapHarianData> => {
       operasional: 0,
       kerugian: 0,
       labaBersih: 0,
+      masterKas: [],
       penjualan: [],
       penambahanStok: [],
     };
@@ -196,6 +202,28 @@ const labelTanggalPanjang = (iso: string) =>
   });
 
 const isHariIni = (iso: string) => iso === formatLocalDate(new Date());
+
+const totalMasterKas = (rows: MasterKasRekap[]) =>
+  rows.reduce((sum, row) => sum + row.jumlah, 0);
+
+const getKasBelumTercatat = (rows: MasterKasRekap[]) =>
+  rows.filter((row) => !row.tercatat);
+
+const getKasJenisLabel = (jenis: string) => {
+  switch (jenis.toLowerCase()) {
+    case "cash":
+    case "tunai":
+      return "Cash";
+    case "bank":
+    case "rekening":
+      return "Bank";
+    case "ewallet":
+    case "e-wallet":
+      return "E-Wallet";
+    default:
+      return jenis;
+  }
+};
 
 const filterHistori = (
   groups: HistoriGroup[],
@@ -286,6 +314,39 @@ const useHistori = (refreshToken = 0) => {
 // ============================================================
 //  4. UI COMPONENTS
 // ============================================================
+
+const MasterKasSummary: React.FC<{
+  rows: MasterKasRekap[];
+  S: any;
+  emptyText?: string;
+}> = ({ rows, S, emptyText = "Belum ada master kas" }) => {
+  if (rows.length === 0) {
+    return <Text style={S.masterKasEmpty}>{emptyText}</Text>;
+  }
+
+  return (
+    <View>
+      {rows.map((row) => (
+        <View key={row.id} style={S.masterKasRow}>
+          <View style={S.masterKasInfo}>
+            <Text style={S.masterKasName}>{row.nama}</Text>
+            <Text style={S.masterKasMeta}>
+              {getKasJenisLabel(row.jenis)}
+              {row.tercatat ? " · sudah dicatat" : " · belum dicatat"}
+            </Text>
+          </View>
+          <Text style={row.tercatat ? S.masterKasValue : S.masterKasValueMuted}>
+            {fmt(row.jumlah)}
+          </Text>
+        </View>
+      ))}
+      <View style={S.masterKasTotalRow}>
+        <Text style={S.masterKasTotalLabel}>Total Master Kas</Text>
+        <Text style={S.masterKasTotalValue}>{fmt(totalMasterKas(rows))}</Text>
+      </View>
+    </View>
+  );
+};
 
 // ── TAB: REKAP HARIAN ────────────────────────────────────────
 const TabRekapHarian: React.FC<{
@@ -383,6 +444,20 @@ const TabRekapHarian: React.FC<{
               <Text style={S.rekapFormula}>
                 RH = MK − (CS + MF + R + OP + Omz)
               </Text>
+
+              <View style={S.rekapDivider} />
+
+              <Text style={S.masterKasTitle}>Master Kas</Text>
+              <MasterKasSummary
+                rows={data.masterKas}
+                S={S}
+                emptyText="Belum ada master kas. Tambahkan dari Akun > Kelola Kas."
+              />
+              {getKasBelumTercatat(data.masterKas).length > 0 ? (
+                <Text style={S.masterKasWarning}>
+                  Lengkapi catatan kas sebelum mengunci rekap.
+                </Text>
+              ) : null}
             </View>
 
             {/* Penjualan Hari Ini */}
@@ -609,26 +684,53 @@ const TabHistori: React.FC<{
               </View>
 
               {/* Rekap snapshot */}
-              {group.rekap && (
+              {(group.rekap || group.masterKas.length > 0) && (
                 <View style={S.histRekapCard}>
+                  <Text style={S.masterKasTitle}>Rekap Penjualan</Text>
                   <View style={S.histRekapRow}>
                     <Text style={S.histRekapLabel}>Omzet</Text>
                     <Text style={S.histRekapValue}>
-                      Rp {group.rekap.omzet.toLocaleString("id-ID")}
+                      Rp {(group.rekap?.omzet ?? 0).toLocaleString("id-ID")}
                     </Text>
                   </View>
                   <View style={S.histRekapRow}>
                     <Text style={S.histRekapLabel}>HPP</Text>
                     <Text style={S.histRekapValue}>
-                      Rp {group.rekap.hpp.toLocaleString("id-ID")}
+                      Rp {(group.rekap?.hpp ?? 0).toLocaleString("id-ID")}
+                    </Text>
+                  </View>
+                  <View style={S.histRekapRow}>
+                    <Text style={S.histRekapLabel}>Laba Kotor</Text>
+                    <Text style={S.histRekapValueGreen}>
+                      Rp {(group.rekap?.laba_kotor ?? 0).toLocaleString("id-ID")}
+                    </Text>
+                  </View>
+                  <View style={S.histRekapRow}>
+                    <Text style={S.histRekapLabel}>Operasional</Text>
+                    <Text style={S.histRekapValue}>
+                      Rp {(group.rekap?.operasional ?? 0).toLocaleString("id-ID")}
+                    </Text>
+                  </View>
+                  <View style={S.histRekapRow}>
+                    <Text style={S.histRekapLabel}>Kerugian</Text>
+                    <Text style={S.histRekapValue}>
+                      Rp {(group.rekap?.kerugian ?? 0).toLocaleString("id-ID")}
                     </Text>
                   </View>
                   <View style={S.histRekapRow}>
                     <Text style={S.histRekapLabel}>Laba Bersih</Text>
                     <Text style={S.histRekapValueGreen}>
-                      Rp {group.rekap.laba_bersih.toLocaleString("id-ID")}
+                      Rp {(group.rekap?.laba_bersih ?? 0).toLocaleString("id-ID")}
                     </Text>
                   </View>
+
+                  <View style={S.rekapDivider} />
+                  <Text style={S.masterKasTitle}>Master Kas</Text>
+                  <MasterKasSummary
+                    rows={group.masterKas}
+                    S={S}
+                    emptyText="Belum ada master kas"
+                  />
                 </View>
               )}
 
@@ -718,7 +820,7 @@ const CatatRekapKas: React.FC<CatatRekapKasProps> = ({
 }) => {
   const { userId, loading: userLoading } = useCurrentUser();
   const [kasOptions, setKasOptions] = useState<
-    Array<{ id: number; nama: string; jenis: string }>
+    { id: number; nama: string; jenis: string }[]
   >([]);
   const [selectedKas, setSelectedKas] = useState<{
     id: number;
@@ -1076,6 +1178,21 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
       return;
     }
 
+    if (data.masterKas.length === 0) {
+      alert("Tambahkan master kas terlebih dahulu di Akun > Kelola Kas");
+      return;
+    }
+
+    const kasBelumTercatat = getKasBelumTercatat(data.masterKas);
+    if (kasBelumTercatat.length > 0) {
+      alert(
+        `Lengkapi catatan kas terlebih dahulu: ${kasBelumTercatat
+          .map((row) => row.nama)
+          .join(", ")}`,
+      );
+      return;
+    }
+
     if (userLoading) {
       alert("Data user sedang dimuat");
       return;
@@ -1135,6 +1252,11 @@ export const ModalLockRekap: React.FC<LockRekapModalProps> = ({
                 Rp {data.labaBersih.toLocaleString("id-ID")}
               </Text>
             </View>
+          </View>
+
+          <View style={S.lockSummaryCard}>
+            <Text style={S.masterKasTitle}>Master Kas</Text>
+            <MasterKasSummary rows={data.masterKas} S={S} />
           </View>
 
           <View style={S.modalButtonRow}>

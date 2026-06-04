@@ -160,9 +160,6 @@ const db_keluar = async (): Promise<void> => {
 //  2. KALKULASI / HELPERS
 // ============================================================
 
-const getInisial = (nama: string): string =>
-  nama.trim().charAt(0).toUpperCase();
-
 const getLabelRole = (role: UserRole): string =>
   role === "admin" ? "admin" : "operator";
 
@@ -349,13 +346,13 @@ const formatTanggalPendek = (iso: string) => {
   });
 };
 
-const kasJenisOptions: Array<{ key: KasJenis; label: string }> = [
+const kasJenisOptions: { key: KasJenis; label: string }[] = [
   { key: "cash", label: "Cash" },
   { key: "bank", label: "Bank" },
   { key: "ewallet", label: "E-Wallet" },
 ];
 
-const userRoleOptions: Array<{ key: UserRole; label: string }> = [
+const userRoleOptions: { key: UserRole; label: string }[] = [
   { key: "operator", label: "Operator" },
   { key: "admin", label: "Admin" },
 ];

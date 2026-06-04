@@ -13,6 +13,7 @@ import {
   KasirDarkColors as darkColors,
   KasirLightColors as lightColors,
 } from "@/styles/AppStyle";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -26,6 +27,26 @@ import {
 } from "react-native";
 
 type Step = 1 | 2 | 3;
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+const getJenisIcon = (jenis: string): IoniconName => {
+  const normalized = jenis.trim().toLowerCase();
+
+  if (normalized.includes("pulsa")) return "phone-portrait-outline";
+  if (normalized.includes("lampu")) return "bulb-outline";
+  if (normalized.includes("kabel")) return "git-network-outline";
+  if (normalized.includes("headset")) return "headset-outline";
+  if (normalized.includes("top up") || normalized.includes("game")) {
+    return "game-controller-outline";
+  }
+  if (normalized.includes("token")) return "receipt-outline";
+  if (normalized.includes("transfer")) return "swap-horizontal-outline";
+  if (normalized.includes("voucher")) return "card-outline";
+  if (normalized.includes("digital")) return "cloud-outline";
+  if (normalized.includes("barang")) return "cube-outline";
+
+  return "pricetag-outline";
+};
 
 // ============================================================
 // HELPER SUB-COMPONENTS
@@ -37,27 +58,11 @@ interface HeaderProps {
 }
 
 const KasirHeader: React.FC<HeaderProps> = ({ subtitle, S }) => {
-  const [syncing, setSyncing] = useState<boolean>(false);
-
-  const sync = async () => {
-    setSyncing(true);
-    setSyncing(false);
-  };
   return (
     <View style={S.header}>
       <View>
         <Text style={S.headerTitle}>Kasir</Text>
-        <Text style={S.headerSubtitle}>{subtitle}</Text>
       </View>
-      <TouchableOpacity
-        style={S.syncButton}
-        onPress={sync}
-        activeOpacity={0.8}
-        disabled={syncing}
-      >
-        <View style={S.syncDot} />
-        <Text style={S.syncText}>{syncing ? "Syncing..." : "Sync"}</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -117,6 +122,7 @@ export default function TransactionScreen() {
   const { userId, loading: userLoading } = useCurrentUser();
   const { isDark, colors: C } = useTheme();
   const S = isDark ? createStyles(darkColors) : createStyles(lightColors);
+  const jenisIconColor = isDark ? darkColors.typeTitle : lightColors.typeTitle;
 
   // ── STATE MANAGEMENT ──
   const [jenisList, setJenisList] = useState<string[]>([]);
@@ -275,10 +281,16 @@ export default function TransactionScreen() {
                   onPress={() => handleSelectJenis(jenis)}
                   activeOpacity={0.75}
                 >
-                  <Text style={S.typeTitle}>{jenis}</Text>
-                  <Text style={S.typeCount}>
-                    {kategoriList.length || index + 1} item
-                  </Text>
+                  <View style={S.typeTitleRow}>
+                    <Ionicons
+                      name={getJenisIcon(jenis)}
+                      size={18}
+                      color={jenisIconColor}
+                    />
+                    <Text style={[S.typeTitle, S.typeTitleInline]}>
+                      {jenis}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}

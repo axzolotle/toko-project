@@ -2004,12 +2004,22 @@ export const KasirCreateStyles = (c: typeof KasirLightColors) =>
     typeIconEmoji: {
       fontSize: 26,
     },
+    typeTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 5,
+    },
     typeTitle: {
       fontSize: 15,
       fontWeight: "600",
       color: c.typeTitle,
       marginBottom: 5,
       letterSpacing: -0.2,
+    },
+    typeTitleInline: {
+      flexShrink: 1,
+      marginBottom: 0,
     },
     typeCount: {
       fontSize: 13,
@@ -3018,6 +3028,73 @@ export const KasCreateStyles = (c: typeof KasLightColors) =>
       fontSize: 11,
       color: c.rekapFormula,
       marginTop: 10,
+    },
+    masterKasTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: c.rekapValueDark,
+      marginBottom: 10,
+      textTransform: "uppercase",
+    },
+    masterKasRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 7,
+      gap: 12,
+    },
+    masterKasInfo: {
+      flex: 1,
+    },
+    masterKasName: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: c.rekapValueDark,
+    },
+    masterKasMeta: {
+      fontSize: 11,
+      color: c.rekapLabel,
+      marginTop: 2,
+    },
+    masterKasValue: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: c.rekapValueGreen,
+    },
+    masterKasValueMuted: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: c.rekapLabel,
+    },
+    masterKasTotalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderTopWidth: 1,
+      borderTopColor: c.rekapDivider,
+      marginTop: 8,
+      paddingTop: 10,
+    },
+    masterKasTotalLabel: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: c.rekapValueDark,
+    },
+    masterKasTotalValue: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: c.rekapValueGreen,
+    },
+    masterKasEmpty: {
+      fontSize: 12,
+      color: c.rekapLabel,
+      paddingVertical: 8,
+    },
+    masterKasWarning: {
+      fontSize: 12,
+      color: c.rekapValueRed,
+      marginTop: 10,
+      fontWeight: "600",
     },
     pjSectionHeader: {
       flexDirection: "row",

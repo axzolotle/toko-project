@@ -1,4 +1,5 @@
 import { useAuth } from "@/service/useAuth";
+import { useCurrentUser } from "@/service/useCurrentUser";
 import {
   LoginDarkColors as darkColors,
   LoginDarkStyles as darkStyles,
@@ -8,7 +9,7 @@ import {
 import { useTheme } from "@/lib/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -23,6 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register, loading, error, clearError } = useAuth();
+  const currentUser = useCurrentUser();
 
   // Login state
   const [loginUsername, setLoginUsername] = useState("");
@@ -38,6 +40,12 @@ export default function LoginScreen() {
   const { isDark } = useTheme();
   const S = isDark ? darkStyles : lightStyles;
   const C = isDark ? darkColors : lightColors;
+
+  useEffect(() => {
+    if (!currentUser.loading && currentUser.userId !== null) {
+      router.replace("/(tabs)/transaction");
+    }
+  }, [currentUser.loading, currentUser.userId, router]);
 
   const handleLogin = async () => {
     if (!loginUsername || !loginPassword) {

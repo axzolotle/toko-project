@@ -263,7 +263,7 @@ const LaporanScreen: React.FC = () => {
   const C = isDark ? darkColors : lightColors;
 
   // Hook: semua state + fetch ada di sini
-  const { tanggal, data, loading, syncing, prevHari, nextHari, sync } =
+  const { tanggal, data, loading, prevHari, nextHari, sync } =
     useLaporan();
 
   const labelTanggal = formatTanggalLabel(tanggal);
@@ -304,15 +304,6 @@ const LaporanScreen: React.FC = () => {
         {/* ── HEADER ── */}
         <View style={S.header}>
           <Text style={S.headerTitle}>Laporan</Text>
-          <TouchableOpacity
-            style={S.syncButton}
-            onPress={sync}
-            activeOpacity={0.8}
-            disabled={syncing}
-          >
-            <View style={S.syncDot} />
-            <Text style={S.syncText}>{syncing ? "Syncing..." : "Sync"}</Text>
-          </TouchableOpacity>
         </View>
 
         {/* ── DATE NAVIGATOR ── */}
